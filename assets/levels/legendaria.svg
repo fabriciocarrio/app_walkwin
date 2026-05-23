@@ -1,0 +1,14 @@
+<svg width="240" height="240" viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#F43F5E"/>
+      <stop offset="100%" stop-color="#BE123C"/>
+    </linearGradient>
+  </defs>
+  <rect width="240" height="240" rx="28" fill="url(#g)"/>
+  <circle cx="120" cy="82" r="46" fill="#FFFFFF" fill-opacity="0.18"/>
+  <path d="M120 52 L134 76 L162 82 L142 102 L146 132 L120 120 L94 132 L98 102 L78 82 L106 76 Z" fill="#FFFFFF"/>
+  <circle cx="120" cy="82" r="10" fill="#F43F5E"/>
+  <rect x="34" y="154" width="172" height="40" rx="20" fill="#FFFFFF" fill-opacity="0.2"/>
+  <text x="120" y="181" font-size="20" font-family="Arial" font-weight="700" text-anchor="middle" fill="#FFFFFF">LEYENDARIA</text>
+</svg>

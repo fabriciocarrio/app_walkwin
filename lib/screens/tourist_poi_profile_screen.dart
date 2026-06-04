@@ -13,10 +13,12 @@ class TouristPoiProfileScreen extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg = isDark ? AppColors.bgDark : AppColors.bgLight;
     final card = isDark ? AppColors.cardDark : AppColors.cardLight;
-    final textPrimary =
-        isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final textSecondary =
-        isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+    final textPrimary = isDark
+        ? AppColors.textPrimaryDark
+        : AppColors.textPrimaryLight;
+    final textSecondary = isDark
+        ? AppColors.textSecondaryDark
+        : AppColors.textSecondaryLight;
 
     return Scaffold(
       backgroundColor: bg,
@@ -34,7 +36,10 @@ class TouristPoiProfileScreen extends StatelessWidget {
                   color: Colors.black.withAlpha(60),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+                child: const Icon(
+                  Icons.arrow_back_rounded,
+                  color: Colors.white,
+                ),
               ),
             ),
             flexibleSpace: FlexibleSpaceBar(
@@ -82,7 +87,7 @@ class TouristPoiProfileScreen extends StatelessWidget {
                       ),
                       _chip(
                         icon: Icons.eco_rounded,
-                        text: '+${poi.rewardCoins} monedas',
+                        text: '+${poi.rewardCoins} Puntos Exploria',
                         bg: const Color(0xFF4A9955).withAlpha(16),
                         fg: const Color(0xFF4A9955),
                       ),

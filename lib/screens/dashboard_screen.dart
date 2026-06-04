@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -32,8 +32,7 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen>
     with TickerProviderStateMixin {
   int _steps = 0;
-  int _coins = 1240;
-  int _pepitas = 0;
+  int _peBalance = 1240;
   int _level = 5;
   int _streak = 7;
   int _xpTotal = 0;
@@ -48,7 +47,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   String? _apiLevelTitle;
   int _dailyGoal = 10000;
   bool _loading = false;
-  bool _pepitasLoading = true;
+  // pepitas removed after rebrand; keep loading flags minimal
   List<Business> _featured = [];
   bool _featuredLoading = true;
   WeeklyActivitySummary? _weekly;
@@ -89,7 +88,6 @@ class _DashboardScreenState extends State<DashboardScreen>
     _scheduleMidnightReset();
     _loadStepSource();
     _loadStats();
-    _loadPepitas();
     _loadWeeklyActivity();
     _initPedometer();
     _loadFeatured();
@@ -224,19 +222,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     }
   }
 
-  Future<void> _loadPepitas() async {
-    try {
-      final data = await ApiService.getPepitaBalance();
-      if (mounted) {
-        setState(() {
-          _pepitas = data['pepitas_balance'] ?? data['balance'] ?? _pepitas;
-          _pepitasLoading = false;
-        });
-      }
-    } catch (_) {
-      if (mounted) setState(() => _pepitasLoading = false);
-    }
-  }
+  // Pepitas balance loaded via stats endpoint, no separate load needed.
 
   Future<void> _loadMissions() async {
     try {
@@ -276,7 +262,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   Future<void> _showProgressNotification() async {
     await NotificationService.showProgressNotification(
       steps: _totalSteps,
-      coins: _liveCoins,
+      coins: _livePe,
       dailyGoal: _dailyGoal,
     );
   }
@@ -302,7 +288,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   // Total = pasos de la API (histórico) + pasos en esta sesión
   int get _totalSteps => _steps + _sessionSteps;
   int get _pendingSteps => math.max(0, _sessionSteps - _lastSyncedSteps);
-  int get _liveCoins => _coins + (_pendingSteps ~/ 100);
+  int get _livePe => _peBalance + (_pendingSteps ~/ 100);
 
   DateTime _argentinaNow() {
     // Argentina UTC-3 (sin DST actual)
@@ -406,7 +392,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         final newStreak = stats['streak'] ?? _streak;
         setState(() {
           _steps = nextBaseSteps;
-          _coins = stats['coins'] ?? _coins;
+          _peBalance = stats['pe_balance'] ?? stats['coins'] ?? _peBalance;
           _level = stats['level'] ?? _level;
           _streak = newStreak;
           _xpTotal = stats['xp_total'] ?? _xpTotal;
@@ -422,7 +408,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           _levelBaseXp = stats['level_base_xp'] ?? _levelBaseXp;
           _levelGrowthXp = stats['level_growth_xp'] ?? _levelGrowthXp;
           _dailyGoal = stats['daily_steps_goal'] ?? _dailyGoal;
-          _pepitas = stats['pepitas_balance'] ?? _pepitas;
+          // pepitas removed after rebrand
           _loading = false;
         });
         if (nextBaseSteps > previousBaseSteps) {
@@ -447,12 +433,12 @@ class _DashboardScreenState extends State<DashboardScreen>
     if ((_apiLevelTitle ?? '').isNotEmpty) {
       return _apiLevelTitle!;
     }
-    if (_level >= 26) return 'Explorador Maestro';
-    if (_level >= 21) return 'Explorador Elite';
-    if (_level >= 16) return 'Explorador Experto';
-    if (_level >= 11) return 'Explorador Avanzado';
-    if (_level >= 6) return 'Explorador Activo';
-    return 'Explorador Novato';
+    if (_level >= 26) return 'Maestro Explorador';
+    if (_level >= 21) return 'Coleccionista';
+    if (_level >= 16) return 'Aventurero';
+    if (_level >= 11) return 'Descubridor';
+    if (_level >= 6) return 'Explorador';
+    return 'Caminante';
   }
 
   @override
@@ -476,7 +462,6 @@ class _DashboardScreenState extends State<DashboardScreen>
             : RefreshIndicator(
                 onRefresh: () async {
                   await _loadStats();
-                  await _loadPepitas();
                   await _loadWeeklyActivity();
                   await _loadMissions();
                 },
@@ -496,8 +481,6 @@ class _DashboardScreenState extends State<DashboardScreen>
                         textPrimary,
                         textSecondary,
                       ),
-                      const SizedBox(height: 16),
-                      _buildPepitasCard(),
                       const SizedBox(height: 16),
                       _buildStepRing(isDark, card, textPrimary, textSecondary),
                       const SizedBox(height: 16),
@@ -561,7 +544,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         ),
         const SizedBox(width: 10),
         Text(
-          'WalkWin',
+          'Exploria',
           style: const TextStyle(
             color: AppColors.primary,
             fontSize: 20,
@@ -863,14 +846,14 @@ class _DashboardScreenState extends State<DashboardScreen>
                               shape: BoxShape.circle,
                             ),
                             child: const Icon(
-                              Icons.wallet_rounded,
+                              Icons.emoji_events_rounded,
                               size: 13,
                               color: Color(0xFF7A4A00),
                             ),
                           ),
                           const SizedBox(width: 7),
                           Text(
-                            '$_liveCoins',
+                            '$_livePe PE',
                             style: const TextStyle(
                               color: Color(0xFF3A2600),
                               fontWeight: FontWeight.w900,
@@ -933,250 +916,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  Future<void> _openPepitasConversionSheet() async {
-    if (_coins <= 0) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Todavia no tenes monedas para convertir.'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      return;
-    }
-
-    final controller = TextEditingController(text: '100');
-    final converted = await showModalBottomSheet<int>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        final isDark = Theme.of(context).brightness == Brightness.dark;
-        final card = isDark ? AppColors.cardDark : Colors.white;
-        final textPrimary = isDark
-            ? AppColors.textPrimaryDark
-            : AppColors.textPrimaryLight;
-        final textSecondary = isDark
-            ? AppColors.textSecondaryDark
-            : AppColors.textSecondaryLight;
-
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom,
-          ),
-          child: Container(
-            padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
-            decoration: BoxDecoration(
-              color: card,
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(24),
-              ),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 44,
-                  height: 5,
-                  margin: const EdgeInsets.only(bottom: 18),
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? AppColors.dividerDark
-                        : AppColors.dividerLight,
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                ),
-                Text(
-                  'Convertir monedas a pepitas',
-                  style: TextStyle(
-                    color: textPrimary,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Saldo actual: $_coins monedas • $_pepitas pepitas',
-                  style: TextStyle(color: textSecondary, fontSize: 13),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: controller,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'Cantidad de monedas',
-                    hintText: 'Ej: 100',
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  'La conversión queda sujeta a los límites diarios del sistema.',
-                  style: TextStyle(color: textSecondary, fontSize: 12),
-                ),
-                const SizedBox(height: 18),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        child: const Text('Cancelar'),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () {
-                          final value = int.tryParse(controller.text.trim());
-                          if (value == null || value <= 0) return;
-                          Navigator.of(context).pop(value);
-                        },
-                        child: const Text('Convertir'),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-
-    controller.dispose();
-    if (converted == null || converted <= 0 || !mounted) return;
-
-    if (converted > _coins) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No tenes suficientes monedas para convertir.'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      return;
-    }
-
-    try {
-      final result = await ApiService.convertCoinsToPepitas(
-        coins: converted,
-      );
-      final updatedCoins = result['coins_balance'] ?? result['coins'] ?? _coins;
-      final updatedPepitas =
-          result['pepitas_balance'] ?? result['balance'] ?? _pepitas;
-      if (!mounted) return;
-      setState(() {
-        _coins = updatedCoins;
-        _pepitas = updatedPepitas;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Convertiste $converted monedas en pepitas.'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('No se pudo completar la conversion.'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    }
-  }
-
-  Widget _buildPepitasCard() {
-    return GestureDetector(
-      onTap: _openPepitasConversionSheet,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(22),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF0F172A).withAlpha(36),
-              blurRadius: 18,
-              offset: const Offset(0, 10),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 46,
-              height: 46,
-              decoration: BoxDecoration(
-                color: Colors.white.withAlpha(18),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.diamond_rounded,
-                color: Color(0xFFFFD166),
-                size: 24,
-              ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Text(
-                        'Pepitas',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      if (_pepitasLoading)
-                        const SizedBox(
-                          width: 12,
-                          height: 12,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Color(0xFFFFD166),
-                          ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Saldo: $_pepitas pepitas',
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 13,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    'Tocá para convertir monedas y usar las recompensas nuevas.',
-                    style: TextStyle(
-                      color: Colors.white.withAlpha(170),
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            const Icon(
-              Icons.chevron_right_rounded,
-              color: Colors.white70,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  // Pepitas conversion removed as part of rebranding to PE
 
   Widget _buildNudgeCard(bool isDark, Color textPrimary, Color textSecondary) {
     final stepsLeft = math.max(0, 500 - (_totalSteps % 500));

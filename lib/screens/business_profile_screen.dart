@@ -13,29 +13,27 @@ class BusinessProfileScreen extends StatefulWidget {
 }
 
 class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
-  int _coins = 0;
-  int _pepitas = 0;
-  bool _loadingCoins = true;
+  int _peBalance = 0;
+  bool _loadingBalance = true;
   bool _purchasing = false;
 
   @override
   void initState() {
     super.initState();
-    _loadCoins();
+    _loadBalance();
   }
 
-  Future<void> _loadCoins() async {
+  Future<void> _loadBalance() async {
     try {
       final stats = await ApiService.getStats();
       if (mounted) {
         setState(() {
-          _coins = stats['coins'] ?? 0;
-          _pepitas = stats['pepitas_balance'] ?? 0;
-          _loadingCoins = false;
+          _peBalance = stats['pe_balance'] ?? 0;
+          _loadingBalance = false;
         });
       }
     } catch (_) {
-      if (mounted) setState(() => _loadingCoins = false);
+      if (mounted) setState(() => _loadingBalance = false);
     }
   }
 
@@ -44,15 +42,15 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
     try {
       final result = await ApiService.purchaseCoupon(
         widget.business.id,
-        currency: 'pepitas',
+        currency: 'pe',
       );
       if (!mounted) return;
 
       if (result['qr_code_hash'] != null || result['id'] != null) {
         // Éxito — actualizar saldo local
         setState(() {
-          _pepitas =
-              result['new_balance'] ?? _pepitas - widget.business.offerCost;
+          _peBalance =
+              result['new_balance'] ?? _peBalance - widget.business.offerCost;
           _purchasing = false;
         });
         _showResultDialog(
@@ -69,10 +67,7 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _purchasing = false);
-        _showResultDialog(
-          success: false,
-          message: 'Error de conexión.',
-        );
+        _showResultDialog(success: false, message: 'Error de conexión.');
       }
     }
   }
@@ -113,14 +108,16 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg = isDark ? AppColors.bgDark : AppColors.bgLight;
     final card = isDark ? AppColors.cardDark : AppColors.cardLight;
-    final textPrimary =
-        isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final textSecondary =
-        isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+    final textPrimary = isDark
+        ? AppColors.textPrimaryDark
+        : AppColors.textPrimaryLight;
+    final textSecondary = isDark
+        ? AppColors.textSecondaryDark
+        : AppColors.textSecondaryLight;
 
     final b = widget.business;
     final hasOffer = b.offer != null && b.offerCost > 0;
-    final canRedeem = _pepitas >= b.offerCost;
+    final canRedeem = _peBalance >= b.offerCost;
 
     return Scaffold(
       backgroundColor: bg,
@@ -130,8 +127,7 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
           SliverAppBar(
             expandedHeight: 220,
             pinned: true,
-            backgroundColor:
-                isDark ? AppColors.cardDark : AppColors.primary,
+            backgroundColor: isDark ? AppColors.cardDark : AppColors.primary,
             leading: GestureDetector(
               onTap: () => Navigator.pop(context),
               child: Container(
@@ -140,8 +136,10 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
                   color: Colors.black.withAlpha(60),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.arrow_back_rounded,
-                    color: Colors.white),
+                child: const Icon(
+                  Icons.arrow_back_rounded,
+                  color: Colors.white,
+                ),
               ),
             ),
             flexibleSpace: FlexibleSpaceBar(
@@ -191,12 +189,16 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
                       color: AppColors.primary.withAlpha(12),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                          color: AppColors.primary.withAlpha(40)),
+                        color: AppColors.primary.withAlpha(40),
+                      ),
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.eco_rounded,
-                            color: AppColors.primary, size: 28),
+                        const Icon(
+                          Icons.eco_rounded,
+                          color: AppColors.primary,
+                          size: 28,
+                        ),
                         const SizedBox(width: 14),
                         Expanded(
                           child: Column(
@@ -210,7 +212,7 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
                                 ),
                               ),
                               Text(
-                                '+${b.checkinRewardCoins} monedas',
+                                '+${b.checkinRewardCoins} PE',
                                 style: const TextStyle(
                                   color: AppColors.primary,
                                   fontSize: 17,
@@ -226,7 +228,9 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
                             Text(
                               'Radio',
                               style: TextStyle(
-                                  color: textSecondary, fontSize: 11),
+                                color: textSecondary,
+                                fontSize: 11,
+                              ),
                             ),
                             Text(
                               '${b.checkinRadiusMeters}m',
@@ -259,7 +263,12 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
                     _emptyOffers(textSecondary, card)
                   else
                     _buildCouponCard(
-                      b, card, textPrimary, textSecondary, canRedeem),
+                      b,
+                      card,
+                      textPrimary,
+                      textSecondary,
+                      canRedeem,
+                    ),
 
                   const SizedBox(height: 32),
                 ],
@@ -272,7 +281,11 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
       // ── Barra inferior con saldo ────────────────────────
       bottomNavigationBar: Container(
         padding: EdgeInsets.fromLTRB(
-            20, 12, 20, MediaQuery.of(context).padding.bottom + 12),
+          20,
+          12,
+          20,
+          MediaQuery.of(context).padding.bottom + 12,
+        ),
         decoration: BoxDecoration(
           color: card,
           boxShadow: [
@@ -291,15 +304,17 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
               size: 20,
             ),
             const SizedBox(width: 6),
-            _loadingCoins
+            _loadingBalance
                 ? SizedBox(
                     width: 16,
                     height: 16,
                     child: CircularProgressIndicator(
-                        strokeWidth: 2, color: AppColors.primary),
+                      strokeWidth: 2,
+                      color: AppColors.primary,
+                    ),
                   )
                 : Text(
-                    '$_pepitas pepitas',
+                    '$_peBalance PE',
                     style: const TextStyle(
                       color: AppColors.primary,
                       fontWeight: FontWeight.w700,
@@ -349,8 +364,11 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
                     color: const Color(0xFFE8A020).withAlpha(20),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.local_offer_rounded,
-                      color: Color(0xFFE8A020), size: 20),
+                  child: const Icon(
+                    Icons.local_offer_rounded,
+                    color: Color(0xFFE8A020),
+                    size: 20,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -372,21 +390,27 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
               children: [
                 Container(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 6),
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFE8A020).withAlpha(15),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                        color: const Color(0xFFE8A020).withAlpha(60)),
+                      color: const Color(0xFFE8A020).withAlpha(60),
+                    ),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.diamond_rounded,
-                          color: Color(0xFFE8A020), size: 15),
+                      const Icon(
+                        Icons.diamond_rounded,
+                        color: Color(0xFFE8A020),
+                        size: 15,
+                      ),
                       const SizedBox(width: 4),
                       Text(
-                        '${b.offerCost} pepitas',
+                        '${b.offerCost} PE',
                         style: const TextStyle(
                           color: Color(0xFFE8A020),
                           fontWeight: FontWeight.w700,
@@ -418,12 +442,16 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
                             width: 16,
                             height: 16,
                             child: CircularProgressIndicator(
-                                strokeWidth: 2, color: Colors.white),
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
                           )
                         : Text(
-                          canRedeem ? 'Canjear' : 'Sin pepitas',
+                            canRedeem ? 'Canjear' : 'PE insuficientes',
                             style: const TextStyle(
-                                fontSize: 13, fontWeight: FontWeight.w700),
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                   ),
                 ),
@@ -445,8 +473,7 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
       ),
       child: Column(
         children: [
-          Icon(Icons.local_offer_outlined,
-              color: textSecondary, size: 36),
+          Icon(Icons.local_offer_outlined, color: textSecondary, size: 36),
           const SizedBox(height: 10),
           Text(
             'No hay cupones disponibles\nen este momento.',

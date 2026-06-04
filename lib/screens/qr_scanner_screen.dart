@@ -40,7 +40,8 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
     //   "{id}"                     ← simple
     //   contiene el ID             ← flexible
     final id = widget.businessId;
-    final isValid = value == id ||
+    final isValid =
+        value == id ||
         value == 'walkwin://checkin/$id' ||
         value == 'WALKWIN:CHECKIN:$id' ||
         value.contains(id);
@@ -49,8 +50,9 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
       setState(() => _processed = true);
       Navigator.pop(context, value);
     } else {
-      setState(() =>
-          _errorMsg = 'QR incorrecto. Escaneá el código del comercio.');
+      setState(
+        () => _errorMsg = 'QR incorrecto. Escaneá el código del comercio.',
+      );
       Future.delayed(const Duration(seconds: 2), () {
         if (mounted) setState(() => _errorMsg = null);
       });
@@ -133,8 +135,10 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
                 ),
                 const SizedBox(height: 8),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.primary.withAlpha(180),
                     borderRadius: BorderRadius.circular(20),
@@ -142,11 +146,14 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.eco_rounded,
-                          color: Colors.white, size: 18),
+                      const Icon(
+                        Icons.eco_rounded,
+                        color: Colors.white,
+                        size: 18,
+                      ),
                       const SizedBox(width: 6),
                       Text(
-                        '+${widget.coinsReward} monedas al escanear',
+                        '+${widget.coinsReward} puntos Exploria al escanear',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 14,
@@ -160,15 +167,16 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
                   const SizedBox(height: 14),
                   Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 10),
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.red.shade700,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
                       _errorMsg!,
-                      style: const TextStyle(
-                          color: Colors.white, fontSize: 13),
+                      style: const TextStyle(color: Colors.white, fontSize: 13),
                       textAlign: TextAlign.center,
                     ),
                   ),

@@ -1,0 +1,10 @@
+{
+  "APP_ENV": "prod",
+  "API_BASE_URL": "http://walkwin.site/api/v1",
+  "WS_APP_KEY": "606c0729eeee51a5476e6fff5c971f47",
+  "WS_HOST": "walkwin.site",
+  "WS_PORT": 8080,
+  "WS_SCHEME": "http",
+  "WS_CLUSTER": "mt1",
+  "WS_ENABLE": true
+}

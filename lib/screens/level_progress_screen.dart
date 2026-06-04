@@ -268,11 +268,11 @@ class LevelProgressScreen extends StatelessWidget {
   }
 
   String _tierLabel(int targetLevel) {
-    if (targetLevel >= 26) return 'Explorador Maestro';
-    if (targetLevel >= 21) return 'Explorador Elite';
-    if (targetLevel >= 16) return 'Explorador Experto';
-    if (targetLevel >= 11) return 'Explorador Avanzado';
-    if (targetLevel >= 6) return 'Explorador Activo';
-    return 'Explorador Novato';
+    if (targetLevel >= 26) return 'Maestro Explorador';
+    if (targetLevel >= 21) return 'Coleccionista';
+    if (targetLevel >= 16) return 'Aventurero';
+    if (targetLevel >= 11) return 'Descubridor';
+    if (targetLevel >= 6) return 'Explorador';
+    return 'Caminante';
   }
 }

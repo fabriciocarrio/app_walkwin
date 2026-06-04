@@ -3,9 +3,10 @@ import 'dart:io' show Platform;
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:device_info_plus/device_info_plus.dart';
+import '../config/app_config.dart';
 
 class ApiService {
-  static const String baseUrl = 'http://192.168.30.59:8000/api/v1';
+  static const String baseUrl = AppConfig.apiBaseUrl;
   static final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
   static String? _token;
@@ -89,25 +90,6 @@ class ApiService {
     final response = await http.get(
       Uri.parse('$baseUrl/user/stats'),
       headers: _headers,
-    );
-    return jsonDecode(response.body);
-  }
-
-  static Future<Map<String, dynamic>> getPepitaBalance() async {
-    final response = await http.get(
-      Uri.parse('$baseUrl/user/pepitas/balance'),
-      headers: _headers,
-    );
-    return jsonDecode(response.body);
-  }
-
-  static Future<Map<String, dynamic>> convertCoinsToPepitas({
-    required int coins,
-  }) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/user/pepitas/convert'),
-      headers: _headers,
-      body: jsonEncode({'coins': coins}),
     );
     return jsonDecode(response.body);
   }
@@ -262,19 +244,20 @@ class ApiService {
     return jsonDecode(response.body);
   }
 
-  /// Compra un cupón con monedas o pepitas (no requiere ubicación).
+  /// Compra un cupón (no requiere ubicación).
   static Future<Map<String, dynamic>> purchaseCoupon(
     String businessId, {
-    String currency = 'coins',
+    String? currency,
   }) async {
     await getToken();
+    final body = <String, dynamic>{
+      'business_id': businessId,
+      if (currency != null) 'currency': currency,
+    };
     final response = await http.post(
       Uri.parse('$baseUrl/redemptions/purchase'),
       headers: _headers,
-      body: jsonEncode({
-        'business_id': businessId,
-        if (currency != 'coins') 'currency': currency,
-      }),
+      body: jsonEncode(body),
     );
     return jsonDecode(response.body);
   }

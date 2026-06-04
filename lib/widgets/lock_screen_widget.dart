@@ -114,7 +114,7 @@ class LockScreenStepsCoinsWidget extends StatelessWidget {
                       ],
                     ),
                     Text(
-                      'monedas',
+                      'puntos Exploria',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: Colors.grey[500],
                         fontSize: 11,

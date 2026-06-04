@@ -1,9 +1,11 @@
 import 'dart:convert';
+import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:pusher_channels_flutter/pusher_channels_flutter.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
 
 import 'api_service.dart';
+import '../config/app_config.dart';
 import 'notification_service.dart';
 
 class WebSocketService {
@@ -11,15 +13,27 @@ class WebSocketService {
 
   static final WebSocketService instance = WebSocketService._();
 
-  static const String _appKey = 'kam8y8xinq3y49wxdleb';
+  static String get _appKey => AppConfig.wsAppKey;
 
-  final PusherChannelsFlutter _pusher = PusherChannelsFlutter.getInstance();
+  WebSocketChannel? _socket;
+  StreamSubscription<dynamic>? _socketSubscription;
 
   bool _initialized = false;
+  bool _connecting = false;
   String? _userChannel;
 
   Future<void> initForAuthenticatedUser() async {
-    if (_initialized) return;
+    if (_initialized || _connecting) return;
+    if (!AppConfig.wsEnable) {
+      debugPrint('WebSocket disabled for environment ${AppConfig.environment}');
+      return;
+    }
+    if (_appKey.isEmpty) {
+      debugPrint('WebSocket skipped: WS_APP_KEY is empty');
+      return;
+    }
+
+    _connecting = true;
 
     try {
       final token = await ApiService.getToken();
@@ -37,61 +51,152 @@ class WebSocketService {
 
       _userChannel = 'user.$userId';
 
-      await _pusher.init(
-        apiKey: _appKey,
-        cluster: 'mt1',
-        onConnectionStateChange: (currentState, previousState) {
-          debugPrint('WS state: $previousState -> $currentState');
+      final uri = _buildSocketUri();
+      debugPrint('WS connecting to: $uri');
+
+      _socket = WebSocketChannel.connect(uri);
+      _socketSubscription = _socket!.stream.listen(
+        _onRawMessage,
+        onError: (error) {
+          debugPrint('WS stream error: $error');
+          _initialized = false;
         },
-        onError: (message, code, error) {
-          debugPrint('WS error: $message (code: $code)');
+        onDone: () {
+          debugPrint('WS stream closed');
+          _initialized = false;
         },
-        onSubscriptionSucceeded: (channelName, data) {
-          debugPrint('WS subscribed: $channelName');
-        },
-        onSubscriptionError: (message, error) {
-          debugPrint('WS subscription error: $message');
-        },
-        onEvent: _onEvent,
       );
 
-      await _pusher.connect();
-
-      await _pusher.subscribe(channelName: _userChannel!);
-      await _pusher.subscribe(channelName: 'exploration');
-      await _pusher.subscribe(channelName: 'missions');
-
+      // Mark as initialized after opening the stream. Channel subscriptions
+      // happen when the server confirms `pusher:connection_established`.
       _initialized = true;
-      debugPrint('WebSocket initialized for user $userId');
+      debugPrint('WebSocket stream initialized for user $userId');
     } catch (e) {
       debugPrint('WebSocket init failed: $e');
+    } finally {
+      _connecting = false;
     }
   }
 
   Future<void> disconnect() async {
     try {
-      if (_userChannel != null) {
-        await _pusher.unsubscribe(channelName: _userChannel!);
-      }
-      await _pusher.unsubscribe(channelName: 'exploration');
-      await _pusher.unsubscribe(channelName: 'missions');
-      await _pusher.disconnect();
+      _socketSubscription?.cancel();
+      _socketSubscription = null;
+      await _socket?.sink.close();
+      _socket = null;
     } catch (_) {
       // Ignore disconnect failures.
     } finally {
       _initialized = false;
+      _connecting = false;
       _userChannel = null;
     }
   }
 
+  Uri _buildSocketUri() {
+    final apiUri = Uri.parse(AppConfig.apiBaseUrl);
+    final host = AppConfig.wsHost.isNotEmpty ? AppConfig.wsHost : apiUri.host;
+
+    final configuredScheme = AppConfig.wsScheme.toLowerCase();
+    final wsScheme = configuredScheme == 'http'
+        ? 'ws'
+        : configuredScheme == 'https'
+            ? 'wss'
+            : configuredScheme;
+
+    final port = AppConfig.wsPort > 0
+        ? AppConfig.wsPort
+        : (wsScheme == 'wss' ? 443 : 80);
+
+    return Uri(
+      scheme: wsScheme,
+      host: host,
+      port: port,
+      path: '/app/$_appKey',
+      queryParameters: const {
+        'protocol': '7',
+        'client': 'walkwin-mobile',
+        'version': '1.0.0',
+        'flash': 'false',
+      },
+    );
+  }
+
+  void _onRawMessage(dynamic rawMessage) {
+    try {
+      final envelope = _decodeEnvelope(rawMessage);
+      final eventName = envelope['event']?.toString() ?? '';
+      if (eventName.isEmpty) return;
+
+      if (eventName == 'pusher:connection_established') {
+        _subscribeToRequiredChannels();
+        return;
+      }
+
+      if (eventName == 'pusher:ping') {
+        _socket?.sink.add(jsonEncode({
+          'event': 'pusher:pong',
+          'data': <String, dynamic>{},
+        }));
+        return;
+      }
+
+      if (eventName.startsWith('pusher:')) {
+        if (eventName == 'pusher:error') {
+          debugPrint('WS pusher error payload: ${envelope['data']}');
+        }
+        return;
+      }
+
+      _onEvent(
+        eventName: eventName,
+        payload: _decodePayload(envelope['data']),
+      );
+    } catch (e) {
+      debugPrint('WS message parse failed: $e');
+    }
+  }
+
+  Map<String, dynamic> _decodeEnvelope(dynamic rawData) {
+    if (rawData is Map<String, dynamic>) {
+      return rawData;
+    }
+
+    if (rawData is String && rawData.isNotEmpty) {
+      final decoded = jsonDecode(rawData);
+      if (decoded is Map<String, dynamic>) {
+        return decoded;
+      }
+    }
+
+    return <String, dynamic>{};
+  }
+
+  void _subscribeToRequiredChannels() {
+    final channels = <String>[
+      if (_userChannel != null) _userChannel!,
+      'exploration',
+      'missions',
+    ];
+
+    for (final channel in channels) {
+      _socket?.sink.add(
+        jsonEncode({
+          'event': 'pusher:subscribe',
+          'data': <String, dynamic>{
+            'channel': channel,
+          },
+        }),
+      );
+      debugPrint('WS subscribe sent: $channel');
+    }
+  }
+
   // All events from all subscribed channels pass through this global handler.
-  Future<void> _onEvent(PusherEvent event) async {
-    final channelName = event.channelName;
-    final eventName = event.eventName;
-
-    if (channelName.isEmpty || eventName.isEmpty) return;
-
-    final payload = _decodePayload(event.data);
+  Future<void> _onEvent({
+    required String eventName,
+    required Map<String, dynamic> payload,
+  }) async {
 
     switch (eventName) {
       case 'achievement_unlocked':
@@ -123,7 +228,7 @@ class WebSocketService {
         );
         break;
       default:
-        debugPrint('WS unhandled event: $channelName / $eventName');
+        debugPrint('WS unhandled event: $eventName');
     }
   }
 

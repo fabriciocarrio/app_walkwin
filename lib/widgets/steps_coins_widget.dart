@@ -228,7 +228,7 @@ class _StepsCoinsWidgetState extends State<StepsCoinsWidget>
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Monedas',
+                      'Puntos Exploria',
                       style: TextStyle(
                         fontSize: 13,
                         color: Colors.grey[600],

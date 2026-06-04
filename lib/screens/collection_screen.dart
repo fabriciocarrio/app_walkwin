@@ -78,7 +78,10 @@ class _CollectionScreenState extends State<CollectionScreen>
     return Scaffold(
       backgroundColor: bg,
       appBar: AppBar(
-        title: const Text('Mi Colección', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Mi Colección',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         backgroundColor: Colors.transparent,
         elevation: 0,
         bottom: TabBar(
@@ -86,13 +89,15 @@ class _CollectionScreenState extends State<CollectionScreen>
           indicatorColor: AppColors.primary,
           labelColor: isDark ? Colors.white : Colors.black,
           tabs: const [
-            Tab(text: 'Tarjetas'),
+            Tab(text: 'Colecciones'),
             Tab(text: 'Logros'),
           ],
         ),
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+          ? const Center(
+              child: CircularProgressIndicator(color: AppColors.primary),
+            )
           : _error != null
           ? Center(
               child: Padding(
@@ -100,7 +105,11 @@ class _CollectionScreenState extends State<CollectionScreen>
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.error_outline, color: Colors.redAccent, size: 34),
+                    const Icon(
+                      Icons.error_outline,
+                      color: Colors.redAccent,
+                      size: 34,
+                    ),
                     const SizedBox(height: 10),
                     const Text('No se pudo cargar la colección.'),
                     const SizedBox(height: 12),
@@ -159,7 +168,9 @@ class _CollectionScreenState extends State<CollectionScreen>
 
     final album = <String, List<CollectibleSpawnDto>>{};
     for (final collectible in albumItems) {
-      final rawCategory = (collectible.collectibleCategory ?? collectible.collectibleSet ?? '').trim();
+      final rawCategory =
+          (collectible.collectibleCategory ?? collectible.collectibleSet ?? '')
+              .trim();
       final category = rawCategory.isNotEmpty ? rawCategory : 'Sin categoría';
       album.putIfAbsent(category, () => <CollectibleSpawnDto>[]);
       album[category]!.add(collectible);
@@ -177,10 +188,14 @@ class _CollectionScreenState extends State<CollectionScreen>
           final depA = (a.department ?? '').toLowerCase();
           final depB = (b.department ?? '').toLowerCase();
           if (depA != depB) return depA.compareTo(depB);
-          return a.collectibleName.toLowerCase().compareTo(b.collectibleName.toLowerCase());
+          return a.collectibleName.toLowerCase().compareTo(
+            b.collectibleName.toLowerCase(),
+          );
         });
         final totalCards = cards.length;
-        final unlockedCards = cards.where((c) => c.quantity > 0 || c.claimed).length;
+        final unlockedCards = cards
+            .where((c) => c.quantity > 0 || c.claimed)
+            .length;
 
         return InkWell(
           borderRadius: BorderRadius.circular(16),
@@ -196,7 +211,9 @@ class _CollectionScreenState extends State<CollectionScreen>
           },
           child: Card(
             margin: const EdgeInsets.only(bottom: 16),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
             child: Padding(
               padding: const EdgeInsets.all(14),
               child: Column(
@@ -214,7 +231,10 @@ class _CollectionScreenState extends State<CollectionScreen>
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.primary.withOpacity(0.12),
                           borderRadius: BorderRadius.circular(999),
@@ -270,10 +290,7 @@ class _CollectionScreenState extends State<CollectionScreen>
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            frameColor.withOpacity(0.85),
-            frameColor.withOpacity(0.45),
-          ],
+          colors: [frameColor.withOpacity(0.85), frameColor.withOpacity(0.45)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -307,7 +324,9 @@ class _CollectionScreenState extends State<CollectionScreen>
                             item.collectibleImageUrl!,
                             fit: BoxFit.cover,
                             color: isUnlocked ? null : Colors.grey,
-                            colorBlendMode: isUnlocked ? null : BlendMode.saturation,
+                            colorBlendMode: isUnlocked
+                                ? null
+                                : BlendMode.saturation,
                             errorBuilder: (_, __, ___) => Container(
                               color: AppColors.primary.withOpacity(0.1),
                               child: const Icon(
@@ -372,7 +391,9 @@ class _CollectionScreenState extends State<CollectionScreen>
                     overflow: TextOverflow.ellipsis,
                   ),
                   Text(
-                    item.collectibleCategory ?? item.collectibleSet ?? 'Sin Categoría',
+                    item.collectibleCategory ??
+                        item.collectibleSet ??
+                        'Sin Categoría',
                     style: const TextStyle(color: Colors.grey, fontSize: 11),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -423,27 +444,49 @@ class _CollectionScreenState extends State<CollectionScreen>
 
   Color _getRarityColor(String rarity) {
     switch (rarity.toLowerCase()) {
-      case 'legendary': return Colors.orange;
-      case 'epic': return Colors.purple;
-      case 'rare': return Colors.blue;
-      default: return Colors.grey;
+      case 'legendary':
+        return Colors.orange;
+      case 'epic':
+        return Colors.purple;
+      case 'rare':
+        return Colors.blue;
+      default:
+        return Colors.grey;
     }
   }
 
   Widget _buildAchievementsTab(bool isDark) {
-    final deptAchievements = _achievements.where((a) => a.criteria != null && a.criteria!.containsKey('department_completion')).toList();
-    final otherAchievements = _achievements.where((a) => a.criteria == null || !a.criteria!.containsKey('department_completion')).toList();
+    final deptAchievements = _achievements
+        .where(
+          (a) =>
+              a.criteria != null &&
+              a.criteria!.containsKey('department_completion'),
+        )
+        .toList();
+    final otherAchievements = _achievements
+        .where(
+          (a) =>
+              a.criteria == null ||
+              !a.criteria!.containsKey('department_completion'),
+        )
+        .toList();
 
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
         if (deptAchievements.isNotEmpty) ...[
-          const Text('Logros por Departamento', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const Text(
+            'Logros por Departamento',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 12),
           ...deptAchievements.map((a) => _buildAchievementTile(a, isDark)),
           const SizedBox(height: 24),
         ],
-        const Text('Otros Logros', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        const Text(
+          'Otros Logros',
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
         const SizedBox(height: 12),
         ...otherAchievements.map((a) => _buildAchievementTile(a, isDark)),
       ],
@@ -456,17 +499,24 @@ class _CollectionScreenState extends State<CollectionScreen>
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: a.isUnlocked ? AppColors.primary : Colors.grey.withOpacity(0.3),
+          backgroundColor: a.isUnlocked
+              ? AppColors.primary
+              : Colors.grey.withOpacity(0.3),
           child: Icon(
             a.isUnlocked ? Icons.emoji_events : Icons.lock,
             color: a.isUnlocked ? Colors.white : Colors.grey,
           ),
         ),
-        title: Text(a.name, style: TextStyle(fontWeight: a.isUnlocked ? FontWeight.bold : FontWeight.normal)),
+        title: Text(
+          a.name,
+          style: TextStyle(
+            fontWeight: a.isUnlocked ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
         subtitle: Text(a.description ?? ''),
-        trailing: a.isUnlocked 
-          ? const Icon(Icons.check_circle, color: Colors.green)
-          : null,
+        trailing: a.isUnlocked
+            ? const Icon(Icons.check_circle, color: Colors.green)
+            : null,
       ),
     );
   }
@@ -507,10 +557,7 @@ class CategoryCollectionDetailScreen extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            frameColor.withOpacity(0.85),
-            frameColor.withOpacity(0.45),
-          ],
+          colors: [frameColor.withOpacity(0.85), frameColor.withOpacity(0.45)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -537,12 +584,16 @@ class CategoryCollectionDetailScreen extends StatelessWidget {
               child: Stack(
                 children: [
                   Positioned.fill(
-                    child: item.collectibleImageUrl != null && item.collectibleImageUrl!.isNotEmpty
+                    child:
+                        item.collectibleImageUrl != null &&
+                            item.collectibleImageUrl!.isNotEmpty
                         ? Image.network(
                             item.collectibleImageUrl!,
                             fit: BoxFit.cover,
                             color: isUnlocked ? null : Colors.grey,
-                            colorBlendMode: isUnlocked ? null : BlendMode.saturation,
+                            colorBlendMode: isUnlocked
+                                ? null
+                                : BlendMode.saturation,
                             errorBuilder: (_, __, ___) => Container(
                               color: AppColors.primary.withOpacity(0.1),
                               child: const Icon(
@@ -565,7 +616,10 @@ class CategoryCollectionDetailScreen extends StatelessWidget {
                     top: 8,
                     right: 8,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.black.withOpacity(0.68),
                         borderRadius: BorderRadius.circular(999),
@@ -596,7 +650,10 @@ class CategoryCollectionDetailScreen extends StatelessWidget {
                 children: [
                   Text(
                     item.collectibleName,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -612,7 +669,10 @@ class CategoryCollectionDetailScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: frameColor.withOpacity(0.18),
                       borderRadius: BorderRadius.circular(4),
@@ -642,9 +702,7 @@ class CategoryCollectionDetailScreen extends StatelessWidget {
     final ratio = total == 0 ? 0.0 : unlocked / total;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(categoryName),
-      ),
+      appBar: AppBar(title: Text(categoryName)),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -691,7 +749,8 @@ class CategoryCollectionDetailScreen extends StatelessWidget {
                   crossAxisSpacing: 10,
                   mainAxisSpacing: 10,
                 ),
-                itemBuilder: (context, index) => _buildCard(context, cards[index]),
+                itemBuilder: (context, index) =>
+                    _buildCard(context, cards[index]),
               ),
             ),
           ],

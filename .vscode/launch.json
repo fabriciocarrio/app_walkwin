@@ -9,6 +9,24 @@
       "args": ["-d", "chrome", "--web-port", "3000"]
     },
     {
+      "name": "walkwin_app (Prod Debug)",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "debug",
+      "args": [
+        "--dart-define-from-file=env/prod.json"
+      ]
+    },
+    {
+      "name": "walkwin_app (Android Prod Debug)",
+      "request": "launch",
+      "type": "dart",
+      "flutterMode": "debug",
+      "args": [
+        "--dart-define-from-file=env/prod.json"
+      ]
+    },
+    {
       "name": "walkwin_app (Web - Release)",
       "request": "launch",
       "type": "dart",

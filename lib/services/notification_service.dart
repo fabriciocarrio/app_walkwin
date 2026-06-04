@@ -90,37 +90,44 @@ class NotificationService {
     final clampedSteps = steps.clamp(0, safeGoal);
     final progressPct = ((clampedSteps / safeGoal) * 100).round();
 
-    final compactText = '${_formatInt(steps)} pasos';
+    final titleText = reachedGoal
+        ? 'Meta diaria completada'
+        : '${_formatInt(steps)} pasos hoy';
 
     final statusText = reachedGoal
         ? 'Meta alcanzada'
         : 'Faltan ${_formatInt(stepsLeft.clamp(0, 999999))} pasos';
 
-    final detailLines = <String>[
-      'Monedas: ${_formatInt(coins)}',
-      'Meta diaria: ${_formatInt(safeGoal)} pasos',
-      'Progreso: $progressPct%',
-      statusText,
-    ];
+    final bodyText = reachedGoal
+      ? '${_formatInt(coins)} PE acumulados | ${_formatInt(safeGoal)} / ${_formatInt(safeGoal)} pasos'
+      : '$progressPct% de tu meta | ${_formatInt(coins)} PE | ${_formatInt(clampedSteps)} / ${_formatInt(safeGoal)} pasos';
+
+    final expandedText = reachedGoal
+      ? 'Completaste tu meta diaria de ${_formatInt(safeGoal)} pasos y llevas ${_formatInt(coins)} PE acumulados.'
+      : 'Llevas ${_formatInt(clampedSteps)} de ${_formatInt(safeGoal)} pasos. $statusText. PE acumulados: ${_formatInt(coins)}.';
 
     await _plugin.show(
       _persistentNotificationId,
-      compactText,
-      'WalkWin',
+      titleText,
+      bodyText,
       NotificationDetails(
         android: AndroidNotificationDetails(
           _persistentChannelId,
           _persistentChannelName,
           importance: Importance.low,
           priority: Priority.low,
-          ongoing: true, // Notificación persistente (no despedible)
+          ongoing: true,
           autoCancel: false,
           onlyAlertOnce: true,
-          showProgress: false,
-          subText: statusText,
-          styleInformation: InboxStyleInformation(
-            detailLines,
-            contentTitle: 'Resumen del dia',
+          showWhen: false,
+          category: AndroidNotificationCategory.progress,
+          showProgress: !reachedGoal,
+          maxProgress: safeGoal,
+          progress: clampedSteps,
+          subText: 'WalkWin',
+          styleInformation: BigTextStyleInformation(
+            expandedText,
+            contentTitle: titleText,
             summaryText: statusText,
             htmlFormatContentTitle: false,
             htmlFormatSummaryText: false,

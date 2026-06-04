@@ -86,7 +86,7 @@ class _TasksScreenState extends State<TasksScreen> {
                     children: [
                       // Header
                       Text(
-                        'Tareas y Misiones',
+                        'Misiones',
                         style: TextStyle(
                           color: textPrimary,
                           fontSize: 24,

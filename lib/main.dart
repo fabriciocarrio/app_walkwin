@@ -12,14 +12,14 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await NotificationService.init();
   OfflineSyncService.listenAndSync();
-  runApp(const WalkWinApp());
+  runApp(const ExploriaApp());
 }
 
 // Global notifier for theme switching
 final themeNotifier = ValueNotifier<ThemeMode>(ThemeMode.light);
 
-class WalkWinApp extends StatelessWidget {
-  const WalkWinApp({super.key});
+class ExploriaApp extends StatelessWidget {
+  const ExploriaApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +27,7 @@ class WalkWinApp extends StatelessWidget {
       valueListenable: themeNotifier,
       builder: (_, mode, __) {
         return MaterialApp(
-          title: 'WalkWin',
+          title: 'Exploria',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.light,
           darkTheme: AppTheme.dark,

@@ -51,6 +51,7 @@ dependencies:
   mobile_scanner: ^5.2.3
   flutter_svg: ^2.0.17
   pusher_channels_flutter: ^2.4.0
+  web_socket_channel: ^3.0.3
 
 dev_dependencies:
   flutter_test:

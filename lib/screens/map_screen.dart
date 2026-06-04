@@ -146,11 +146,15 @@ class _MapScreenState extends State<MapScreen> {
 
   Future<void> _loadExplorationData() async {
     try {
+      debugPrint(
+        '[Map] Cargando datos desde: ${ApiService.baseUrl} '
+        '@ lat=${_currentLocation.latitude}, lng=${_currentLocation.longitude}',
+      );
       final mapNearby = await ApiService.getMapNearbyPoints(
         lat: _currentLocation.latitude,
         lng: _currentLocation.longitude,
       );
-      final mapData = (mapNearby['data'] as Map<String, dynamic>?) ?? {};
+      final mapData = _extractMapNearbyData(mapNearby);
       final mapState = await ApiService.getExplorationMapState(
         latitude: _currentLocation.latitude,
         longitude: _currentLocation.longitude,
@@ -161,8 +165,23 @@ class _MapScreenState extends State<MapScreen> {
           : (missions['missions'] as List<dynamic>? ?? []);
 
       if (!mounted) return;
+        final businessesData =
+          (mapData['businesses'] as List<dynamic>?) ??
+          (mapData['shops'] as List<dynamic>?) ??
+          const [];
+        final touristLocationsData =
+          (mapData['tourist_locations'] as List<dynamic>?) ??
+          (mapData['touristLocations'] as List<dynamic>?) ??
+          (mapData['pois'] as List<dynamic>?) ??
+          const [];
+        final dynamicSpawnsData =
+          (mapData['dynamic_spawns'] as List<dynamic>?) ??
+          (mapData['collectible_spawns'] as List<dynamic>?) ??
+          (mapData['spawns'] as List<dynamic>?) ??
+          const [];
+
       setState(() {
-        _businesses = (mapData['businesses'] as List<dynamic>? ?? [])
+        _businesses = businessesData
             .map((e) => Business.fromJson(e as Map<String, dynamic>))
             .toList();
         _filteredBusinesses = _searchController.text.trim().isEmpty
@@ -175,21 +194,26 @@ class _MapScreenState extends State<MapScreen> {
                   )
                   .toList();
 
-        _nearbyPois = (mapData['tourist_locations'] as List<dynamic>? ?? [])
+        _nearbyPois = touristLocationsData
             .map((e) => ExplorationPoi.fromJson(e as Map<String, dynamic>))
             .toList();
-        _collectibleSpawns = (mapData['dynamic_spawns'] as List<dynamic>? ?? [])
+        _collectibleSpawns = dynamicSpawnsData
             .map((e) => CollectibleSpawnDto.fromJson(e as Map<String, dynamic>))
             .toList();
         _exploredTiles =
             (mapState['data']?['explored_tiles'] as List<dynamic>? ?? [])
-            .map((e) => ExploredTile.fromJson(e as Map<String, dynamic>))
-            .toList();
+                .map((e) => ExploredTile.fromJson(e as Map<String, dynamic>))
+                .toList();
         _missions = missionItems
             .map((e) => GeoMissionDto.fromJson(e as Map<String, dynamic>))
             .toList();
       });
-    } catch (_) {
+      debugPrint(
+        '[Map] Datos cargados: negocios=${_businesses.length}, '
+        'pois=${_nearbyPois.length}, dinamicos=${_collectibleSpawns.length}',
+      );
+    } catch (e, st) {
+      debugPrint('[Map] Error cargando exploración: $e\n$st');
       // Exploración es complementaria: ignorar errores para no bloquear el mapa.
     }
   }
@@ -201,8 +225,12 @@ class _MapScreenState extends State<MapScreen> {
         lng: _currentLocation.longitude,
       );
       if (mounted) {
-        final data = (mapNearby['data'] as Map<String, dynamic>?) ?? {};
-        final list = (data['businesses'] as List<dynamic>? ?? [])
+        final data = _extractMapNearbyData(mapNearby);
+        final businessItems =
+            (data['businesses'] as List<dynamic>?) ??
+            (data['shops'] as List<dynamic>?) ??
+            const [];
+        final list = businessItems
             .map((b) => Business.fromJson(b as Map<String, dynamic>))
             .toList();
         final distanceCalc = const Distance();
@@ -286,6 +314,26 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
+  Map<String, dynamic> _extractMapNearbyData(Map<String, dynamic> mapNearby) {
+    final nested = mapNearby['data'];
+    if (nested is Map<String, dynamic>) {
+      return nested;
+    }
+    if (nested is Map) {
+      return Map<String, dynamic>.from(nested);
+    }
+
+    // Fallback para APIs que responden directamente con colecciones en raíz.
+    if (mapNearby['businesses'] is List ||
+        mapNearby['shops'] is List ||
+        mapNearby['tourist_locations'] is List ||
+        mapNearby['dynamic_spawns'] is List) {
+      return mapNearby;
+    }
+
+    return const {};
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -349,7 +397,8 @@ class _MapScreenState extends State<MapScreen> {
                     ),
                     if (_showBusinesses)
                       ..._filteredBusinesses.map((b) {
-                        final point = (b.latitude != null && b.longitude != null)
+                        final point =
+                            (b.latitude != null && b.longitude != null)
                             ? LatLng(b.latitude!, b.longitude!)
                             : _currentLocation;
                         return Marker(
@@ -393,7 +442,9 @@ class _MapScreenState extends State<MapScreen> {
                                 ),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: const Color(0xFFFFC857).withAlpha(80),
+                                    color: const Color(
+                                      0xFFFFC857,
+                                    ).withAlpha(80),
                                     blurRadius: 14,
                                     spreadRadius: 1,
                                   ),
@@ -439,7 +490,9 @@ class _MapScreenState extends State<MapScreen> {
                                 ),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: const Color(0xFF7C4DFF).withAlpha(90),
+                                    color: const Color(
+                                      0xFF7C4DFF,
+                                    ).withAlpha(90),
                                     blurRadius: 14,
                                     spreadRadius: 1,
                                   ),
@@ -720,7 +773,8 @@ class _MapScreenState extends State<MapScreen> {
             icon: Icons.auto_awesome,
             color: const Color(0xFF7C4DFF),
             selected: _showDynamicSpawns,
-            onTap: () => setState(() => _showDynamicSpawns = !_showDynamicSpawns),
+            onTap: () =>
+                setState(() => _showDynamicSpawns = !_showDynamicSpawns),
           ),
         ],
       ),
@@ -1539,9 +1593,9 @@ class _MapScreenState extends State<MapScreen> {
             children: [
               _chip(
                 icon: Icons.auto_awesome,
-                    label: alreadyClaimed
-                        ? 'Ya reclamado'
-                        : '+${spawn.rewardCoins} coins',
+                label: alreadyClaimed
+                    ? 'Ya reclamado'
+                    : '+${spawn.rewardCoins} coins',
                 bg: const Color(0xFF7C4DFF).withAlpha(22),
                 fg: const Color(0xFF7C4DFF),
               ),
@@ -1560,8 +1614,8 @@ class _MapScreenState extends State<MapScreen> {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
-              onPressed: (withinRange && !_claimingExploration)
-                  && !alreadyClaimed
+              onPressed:
+                  (withinRange && !_claimingExploration) && !alreadyClaimed
                   ? () => _collectSpawn(spawn)
                   : null,
               icon: _claimingExploration
@@ -1779,8 +1833,7 @@ class _MapScreenState extends State<MapScreen> {
         ),
       );
       if (ok) {
-        final starterCollectible =
-            (result['data'] is Map<String, dynamic>)
+        final starterCollectible = (result['data'] is Map<String, dynamic>)
             ? (result['data']['starter_collectible'] as Map<String, dynamic>?)
             : null;
 
@@ -1900,7 +1953,7 @@ class _MapScreenState extends State<MapScreen> {
       if (result['coins_earned'] != null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(result['message'] ?? '¡Monedas obtenidas!'),
+            content: Text(result['message'] ?? '¡Puntos Exploria obtenidas!'),
             backgroundColor: AppColors.primary,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(

@@ -66,7 +66,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Empezá a ganar monedas caminando',
+                  'Empezá a ganar Puntos Exploria caminando',
                   style: TextStyle(color: textSecondary, fontSize: 15),
                 ),
                 const SizedBox(height: 40),

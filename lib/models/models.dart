@@ -2,8 +2,7 @@ class User {
   final String id;
   final String name;
   final String email;
-  final int coinsBalance;
-  final int pepitasBalance;
+  final int peBalance;
   final int level;
   final int streakDays;
 
@@ -11,8 +10,7 @@ class User {
     required this.id,
     required this.name,
     required this.email,
-    required this.coinsBalance,
-    required this.pepitasBalance,
+    required this.peBalance,
     required this.level,
     required this.streakDays,
   });
@@ -22,8 +20,8 @@ class User {
       id: json['id']?.toString() ?? '',
       name: json['name'] ?? '',
       email: json['email'] ?? '',
-      coinsBalance: json['coins_balance'] ?? json['coins'] ?? 0,
-      pepitasBalance: json['pepitas_balance'] ?? 0,
+      peBalance:
+          json['pe_balance'] ?? json['coins_balance'] ?? json['coins'] ?? 0,
       level: json['level'] ?? 1,
       streakDays: json['streak_days'] ?? json['streak'] ?? 0,
     );
@@ -71,8 +69,14 @@ class Business {
         ? (offer['title'] as String?)
         : json['offer'] as String?;
     final offerCost = offer is Map<String, dynamic>
-        ? (offer['coin_cost'] as num?)?.toInt() ?? 0
-        : (json['offer_cost'] ?? json['offer_coin_cost'] ?? 0);
+        ? (offer['pe_cost'] as num?)?.toInt() ??
+              (offer['coin_cost'] as num?)?.toInt() ??
+              0
+        : (json['pe_cost'] ??
+              json['offer_pe_cost'] ??
+              json['offer_cost'] ??
+              json['offer_coin_cost'] ??
+              0);
 
     return Business(
       id: json['id']?.toString() ?? '',
@@ -83,15 +87,20 @@ class Business {
           .toInt(),
       offer: offerTitle,
       offerCost: (offerCost as num).toInt(),
-      checkinRewardCoins: json['checkin_reward_coins'] ?? 100,
+      checkinRewardCoins:
+          json['checkin_reward_pe'] ?? json['checkin_reward_coins'] ?? 100,
       checkinRadiusMeters: json['checkin_radius_meters'] ?? 200,
       isActive: json['is_active'] ?? true,
       isFeatured: json['is_featured'] ?? false,
       latitude: json['latitude'] != null
           ? double.tryParse(json['latitude'].toString())
+          : json['lat'] != null
+          ? double.tryParse(json['lat'].toString())
           : null,
       longitude: json['longitude'] != null
           ? double.tryParse(json['longitude'].toString())
+          : json['lng'] != null
+          ? double.tryParse(json['lng'].toString())
           : null,
       qrPayload: json['qr_payload']?.toString(),
       checkedInToday: json['checked_in_today'] == true,
@@ -104,8 +113,7 @@ class Redemption {
   final String businessName;
   final String? businessImage;
   final String? offerTitle;
-  final int coinsSpent;
-  final int pepitasSpent;
+  final int peSpent;
   final String qrCodeHash;
   final String status;
   final DateTime? redeemedAt;
@@ -116,8 +124,7 @@ class Redemption {
     required this.businessName,
     this.businessImage,
     this.offerTitle,
-    required this.coinsSpent,
-    required this.pepitasSpent,
+    required this.peSpent,
     required this.qrCodeHash,
     required this.status,
     this.redeemedAt,
@@ -130,8 +137,7 @@ class Redemption {
       businessName: json['business_name'] ?? '',
       businessImage: json['business_image'],
       offerTitle: json['offer_title'],
-      coinsSpent: json['coins_spent'] ?? 0,
-        pepitasSpent: json['pepitas_spent'] ?? 0,
+      peSpent: json['pe_spent'] ?? json['coins_spent'] ?? 0,
       qrCodeHash: json['qr_code_hash'] ?? '',
       status: json['status'] ?? 'pending',
       redeemedAt: json['redeemed_at'] != null
@@ -395,7 +401,7 @@ class CollectibleSpawnDto {
       collectibleName:
           json['collectible_name']?.toString() ??
           collectible['name']?.toString() ??
-          'Monedas Express',
+          'Puntos Exploria',
       collectibleImageUrl:
           json['collectible_image_url']?.toString() ??
           collectible['image_url']?.toString() ??

@@ -530,7 +530,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               const SizedBox(height: 24),
               Center(
                 child: Text(
-                  'WalkWin v1.0.0',
+                  'Exploria v1.0.0',
                   style: TextStyle(color: textSecondary, fontSize: 12),
                 ),
               ),

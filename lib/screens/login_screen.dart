@@ -56,7 +56,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 20),
                 Text(
-                  'WalkWin',
+                  'Exploria',
                   style: TextStyle(
                     color: textPrimary,
                     fontSize: 34,
@@ -66,7 +66,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Transforma tus pasos en recompensas',
+                  'Explorá tu ciudad, descubrí lugares y obtené recompensas',
                   style: TextStyle(color: textSecondary, fontSize: 15),
                 ),
                 const SizedBox(height: 48),

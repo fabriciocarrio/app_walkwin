@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../models/models.dart';
 import '../services/api_service.dart';
@@ -15,9 +15,7 @@ class _RewardsScreenState extends State<RewardsScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
-  // Datos de usuario
-  int _coins = 0;
-  int _pepitas = 0;
+  int _peBalance = 0;
   int _streak = 0;
 
   // Tab "Mis QRs" + "Historial"
@@ -64,8 +62,7 @@ class _RewardsScreenState extends State<RewardsScreen>
 
       if (mounted) {
         setState(() {
-          _coins = stats['coins'] ?? 0;
-          _pepitas = stats['pepitas_balance'] ?? _pepitas;
+          _peBalance = stats['pe_balance'] ?? stats['coins'] ?? 0;
           _streak = stats['streak'] ?? 0;
           _redemptions = redemptionList
               .map((r) => Redemption.fromJson(r))
@@ -241,14 +238,14 @@ class _RewardsScreenState extends State<RewardsScreen>
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
-                  Icons.diamond_rounded,
+                  Icons.emoji_events_rounded,
                   size: 20,
                   color: Color(0xFF7A4A00),
                 ),
               ),
               const SizedBox(width: 10),
               Text(
-                '$_pepitas',
+                '$_peBalance',
                 style: const TextStyle(
                   color: Color(0xFF3A2600),
                   fontSize: 34,
@@ -261,7 +258,7 @@ class _RewardsScreenState extends State<RewardsScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Pepitas',
+                    'PE',
                     style: TextStyle(
                       color: Color(0xFF6A4300),
                       fontSize: 15,
@@ -269,10 +266,10 @@ class _RewardsScreenState extends State<RewardsScreen>
                     ),
                   ),
                   const SizedBox(height: 2),
-                  Text(
-                    '$_coins monedas',
-                    style: const TextStyle(
-                      color: Color(0xFF7A5A20),
+                  const Text(
+                    'Puntos Exploria',
+                    style: TextStyle(
+                      color: Color(0xFF7A5210),
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                     ),
@@ -407,7 +404,7 @@ class _RewardsScreenState extends State<RewardsScreen>
     Color textPrimary,
     Color textSecondary,
   ) {
-    final canAfford = _pepitas >= business.offerCost;
+    final canAfford = _peBalance >= business.offerCost;
     final isPurchasing = _purchasing.contains(business.id);
 
     return Container(
@@ -509,7 +506,7 @@ class _RewardsScreenState extends State<RewardsScreen>
                   const SizedBox(height: 10),
                   Row(
                     children: [
-                      // Costo en monedas
+                      // Costo en PE
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 10,
@@ -525,7 +522,7 @@ class _RewardsScreenState extends State<RewardsScreen>
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(
-                              Icons.diamond_rounded,
+                              Icons.emoji_events_rounded,
                               color: canAfford
                                   ? AppColors.primaryLight
                                   : Colors.red.shade400,
@@ -533,7 +530,7 @@ class _RewardsScreenState extends State<RewardsScreen>
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              '${business.offerCost} pepitas',
+                              '${business.offerCost} PE',
                               style: TextStyle(
                                 color: canAfford
                                     ? AppColors.primaryLight
@@ -573,7 +570,7 @@ class _RewardsScreenState extends State<RewardsScreen>
                                   ),
                                 )
                               : Text(
-                                  canAfford ? 'Canjear' : 'Sin pepitas',
+                                  canAfford ? 'Canjear' : 'PE insuficientes',
                                   style: const TextStyle(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w600,
@@ -597,16 +594,16 @@ class _RewardsScreenState extends State<RewardsScreen>
     try {
       final result = await ApiService.purchaseCoupon(
         business.id,
-        currency: 'pepitas',
+        currency: 'pe',
       );
       if (!mounted) return;
 
       if (result['id'] != null) {
         // Ã‰xito
         final newBalance =
-            result['new_balance'] ?? (_pepitas - business.offerCost);
+            result['new_balance'] ?? (_peBalance - business.offerCost);
         setState(() {
-          _pepitas = newBalance;
+          _peBalance = newBalance;
           // Agregar a redemptions localmente para que aparezca en "Mis QRs"
           _redemptions.insert(
             0,
@@ -833,15 +830,13 @@ class _RewardsScreenState extends State<RewardsScreen>
             Row(
               children: [
                 const Icon(
-                  Icons.diamond_rounded,
+                  Icons.emoji_events_rounded,
                   color: AppColors.primaryLight,
                   size: 15,
                 ),
                 const SizedBox(width: 4),
                 Text(
-                  r.pepitasSpent > 0
-                      ? '${r.pepitasSpent} pepitas'
-                      : '${r.coinsSpent} monedas',
+                  '${r.peSpent} PE',
                   style: TextStyle(color: textSecondary, fontSize: 13),
                 ),
                 const Spacer(),

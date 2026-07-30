@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import '../models/models.dart';
+import '../services/api_service.dart';
 import '../theme/app_theme.dart';
 
-class MissionsScreen extends StatelessWidget {
+class MissionsScreen extends StatefulWidget {
   final List<GeoMissionDto> missions;
 
   const MissionsScreen({
@@ -10,20 +11,123 @@ class MissionsScreen extends StatelessWidget {
     required this.missions,
   });
 
+  static const typeMeta = {
+    'steps': {
+      'icon': Icons.directions_walk_rounded,
+      'label': 'Pasos',
+      'desc': 'Caminá y acumulá pasos para completar objetivos',
+      'color': Color(0xFF207AF5),
+    },
+    'exploration': {
+      'icon': Icons.explore_rounded,
+      'label': 'Exploración',
+      'desc': 'Visitá lugares y descubrí la ciudad',
+      'color': Color(0xFF20D4A4),
+    },
+    'collectible': {
+      'icon': Icons.collections_bookmark_rounded,
+      'label': 'Coleccionables',
+      'desc': 'Encontrá y coleccioná objetos especiales',
+      'color': Color(0xFFFF6B00),
+    },
+  };
+
+  static const typeOrder = ['steps', 'exploration', 'collectible'];
+
+  @override
+  State<MissionsScreen> createState() => _MissionsScreenState();
+}
+
+class _MissionsScreenState extends State<MissionsScreen> {
+  late List<GeoMissionDto> _missions;
+
+  @override
+  void initState() {
+    super.initState();
+    _missions = List.from(widget.missions);
+  }
+
+  Future<void> _claimReward(GeoMissionDto mission) async {
+    try {
+      final result = await ApiService.claimMissionReward(
+        missionId: mission.id,
+      );
+
+      if (result['success'] == true && mounted) {
+        setState(() {
+          final idx = _missions.indexWhere((m) => m.id == mission.id);
+          if (idx != -1) {
+            _missions[idx] = GeoMissionDto(
+              id: _missions[idx].id,
+              title: _missions[idx].title,
+              description: _missions[idx].description,
+              missionType: _missions[idx].missionType,
+              targetCount: _missions[idx].targetCount,
+              currentProgress: _missions[idx].currentProgress,
+              progressPercent: _missions[idx].progressPercent,
+              rewardCoins: _missions[idx].rewardCoins,
+              rewardXp: _missions[idx].rewardXp,
+              isCompleted: _missions[idx].isCompleted,
+              isClaimed: true,
+              criteria: _missions[idx].criteria,
+              criteriaDescription: _missions[idx].criteriaDescription,
+            );
+          }
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Recompensa reclamada con éxito'),
+              backgroundColor: AppColors.primary,
+            ),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result['message'] ?? 'Error al reclamar'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Error de conexión'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Map<String, List<GeoMissionDto>> _groupByType() {
+    final grouped = <String, List<GeoMissionDto>>{};
+    for (final m in _missions) {
+      grouped.putIfAbsent(m.missionType, () => []).add(m);
+    }
+    return grouped;
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textPrimary = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
     final textSecondary = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
     final card = isDark ? AppColors.cardDark : AppColors.cardLight;
-    final completedCount = missions.where((m) => m.isCompleted).length;
+    final bg = isDark ? AppColors.bgDark : AppColors.bgLight;
+    final completedCount = _missions.where((m) => m.isCompleted).length;
+    final grouped = _groupByType();
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Misiones'),
       ),
       body: SafeArea(
-        child: missions.isEmpty
+        child: _missions.isEmpty
             ? Center(
                 child: Text(
                   'No hay misiones disponibles',
@@ -46,7 +150,7 @@ class MissionsScreen extends StatelessWidget {
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
-                            '$completedCount/${missions.length} misiones realizadas',
+                            '$completedCount/${_missions.length} misiones realizadas',
                             style: TextStyle(
                               color: textPrimary,
                               fontSize: 14,
@@ -57,18 +161,49 @@ class MissionsScreen extends StatelessWidget {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  ...missions.map(
-                    (mission) => Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: _MissionCard(
-                        mission: mission,
-                        isDark: isDark,
-                        textPrimary: textPrimary,
-                        textSecondary: textSecondary,
-                        card: card,
-                      ),
-                    ),
+                  const SizedBox(height: 20),
+                  ...MissionsScreen.typeOrder.where((t) => grouped.containsKey(t)).map(
+                    (type) {
+                      final meta = MissionsScreen.typeMeta[type]!;
+                      final typeMissions = grouped[type]!;
+                      final typeCompleted = typeMissions.where((m) => m.isCompleted).length;
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _TypeHeader(
+                              icon: meta['icon'] as IconData,
+                              label: meta['label'] as String,
+                              description: meta['desc'] as String,
+                              color: meta['color'] as Color,
+                              completed: typeCompleted,
+                              total: typeMissions.length,
+                              isDark: isDark,
+                              textPrimary: textPrimary,
+                              textSecondary: textSecondary,
+                            ),
+                            const SizedBox(height: 12),
+                            ...typeMissions.map(
+                              (mission) => Padding(
+                                padding: const EdgeInsets.only(bottom: 10),
+                                child: _MissionCard(
+                                  mission: mission,
+                                  isDark: isDark,
+                                  textPrimary: textPrimary,
+                                  textSecondary: textSecondary,
+                                  card: card,
+                                  bg: bg,
+                                  onClaim: mission.isCompleted && !mission.isClaimed
+                                      ? () => _claimReward(mission)
+                                      : null,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),
@@ -83,6 +218,8 @@ class _MissionCard extends StatelessWidget {
   final Color textPrimary;
   final Color textSecondary;
   final Color card;
+  final Color bg;
+  final VoidCallback? onClaim;
 
   const _MissionCard({
     required this.mission,
@@ -90,32 +227,55 @@ class _MissionCard extends StatelessWidget {
     required this.textPrimary,
     required this.textSecondary,
     required this.card,
+    required this.bg,
+    this.onClaim,
   });
+
+  Color get _typeColor {
+    final meta = MissionsScreen.typeMeta[mission.missionType];
+    return meta?['color'] as Color? ?? AppColors.primary;
+  }
+
+  IconData get _typeIcon {
+    final meta = MissionsScreen.typeMeta[mission.missionType];
+    return meta?['icon'] as IconData? ?? Icons.assignment_rounded;
+  }
 
   @override
   Widget build(BuildContext context) {
-    final stepProgress = mission.targetSteps > 0
-        ? (mission.progressSteps / mission.targetSteps).clamp(0.0, 1.0)
+    final progress = mission.targetCount > 0
+        ? (mission.currentProgress / mission.targetCount).clamp(0.0, 1.0)
         : 0.0;
-    final businessProgress = mission.nearbyBusinessesRequired > 0
-        ? (mission.progressBusinesses / mission.nearbyBusinessesRequired).clamp(0.0, 1.0)
-        : 0.0;
+    final typeColor = _typeColor;
+
+    final borderColor = mission.isClaimed
+        ? typeColor
+        : (mission.isCompleted
+            ? Colors.orange.withAlpha(180)
+            : Colors.transparent);
 
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: card,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: mission.isCompleted ? AppColors.primary : Colors.transparent,
-          width: mission.isCompleted ? 2 : 1,
-        ),
+        border: Border.all(color: borderColor, width: mission.isCompleted ? 2 : 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: typeColor.withAlpha(20),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(_typeIcon, color: typeColor, size: 16),
+              ),
+              const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   mission.title,
@@ -126,19 +286,21 @@ class _MissionCard extends StatelessWidget {
                   ),
                 ),
               ),
-              if (mission.isCompleted)
-                const Icon(Icons.check_circle_rounded, color: AppColors.primary)
+              if (mission.isClaimed)
+                Icon(Icons.check_circle_rounded, color: typeColor)
+              else if (mission.isCompleted)
+                const Icon(Icons.monetization_on_rounded, color: Colors.orange)
               else
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withAlpha(30),
+                    color: typeColor.withAlpha(30),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
                     '${mission.rewardCoins}🪙 · ${mission.rewardXp} XP',
-                    style: const TextStyle(
-                      color: AppColors.primary,
+                    style: TextStyle(
+                      color: typeColor,
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
                     ),
@@ -153,42 +315,74 @@ class _MissionCard extends StatelessWidget {
               style: TextStyle(color: textSecondary, fontSize: 12),
             ),
           ],
+          if (mission.criteriaDescription != null) ...[
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Icon(Icons.filter_list, size: 12, color: textSecondary),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    mission.criteriaDescription!,
+                    style: TextStyle(color: textSecondary, fontSize: 11),
+                  ),
+                ),
+              ],
+            ),
+          ],
           const SizedBox(height: 10),
           _ProgressRow(
-            label: 'Pasos',
-            progress: stepProgress,
-            detail: '${mission.progressSteps}/${mission.targetSteps}',
+            progress: progress,
+            detail: '${mission.currentProgress}/${mission.targetCount}',
+            typeColor: typeColor,
             isDark: isDark,
             textPrimary: textPrimary,
             textSecondary: textSecondary,
+            showClaimButton: onClaim != null,
           ),
-          const SizedBox(height: 8),
-          _ProgressRow(
-            label: 'Comercios',
-            progress: businessProgress,
-            detail: '${mission.progressBusinesses}/${mission.nearbyBusinessesRequired}',
-            isDark: isDark,
-            textPrimary: textPrimary,
-            textSecondary: textSecondary,
-          ),
+          if (onClaim != null) ...[
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: onClaim,
+                icon: const Icon(Icons.monetization_on, size: 18),
+                label: Text('Reclamar ${mission.rewardCoins}🪙 · ${mission.rewardXp} XP'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
   }
 }
 
-class _ProgressRow extends StatelessWidget {
+class _TypeHeader extends StatelessWidget {
+  final IconData icon;
   final String label;
-  final double progress;
-  final String detail;
+  final String description;
+  final Color color;
+  final int completed;
+  final int total;
   final bool isDark;
   final Color textPrimary;
   final Color textSecondary;
 
-  const _ProgressRow({
+  const _TypeHeader({
+    required this.icon,
     required this.label,
-    required this.progress,
-    required this.detail,
+    required this.description,
+    required this.color,
+    required this.completed,
+    required this.total,
     required this.isDark,
     required this.textPrimary,
     required this.textSecondary,
@@ -198,13 +392,79 @@ class _ProgressRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        SizedBox(
-          width: 72,
-          child: Text(
-            label,
-            style: TextStyle(color: textSecondary, fontSize: 11),
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: color.withAlpha(20),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(icon, color: color, size: 22),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  color: textPrimary,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                description,
+                style: TextStyle(color: textSecondary, fontSize: 12),
+              ),
+            ],
           ),
         ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(
+            color: color.withAlpha(20),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Text(
+            '$completed/$total',
+            style: TextStyle(
+              color: color,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ProgressRow extends StatelessWidget {
+  final double progress;
+  final String detail;
+  final Color typeColor;
+  final bool isDark;
+  final Color textPrimary;
+  final Color textSecondary;
+  final bool showClaimButton;
+
+  const _ProgressRow({
+    required this.progress,
+    required this.detail,
+    required this.typeColor,
+    required this.isDark,
+    required this.textPrimary,
+    required this.textSecondary,
+    this.showClaimButton = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
         Expanded(
           child: ClipRRect(
             borderRadius: BorderRadius.circular(4),
@@ -212,7 +472,9 @@ class _ProgressRow extends StatelessWidget {
               value: progress,
               minHeight: 7,
               backgroundColor: isDark ? AppColors.cardAltDark : const Color(0xFFE0E0E0),
-              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
+              valueColor: AlwaysStoppedAnimation<Color>(
+                showClaimButton ? Colors.orange : typeColor,
+              ),
             ),
           ),
         ),

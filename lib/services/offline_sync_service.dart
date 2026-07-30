@@ -28,18 +28,48 @@ class OfflineSyncService {
     return _db!;
   }
 
-  /// Save or update today's step count locally, marked as unsynced.
+  /// Guarda o actualiza el conteo de pasos del día de forma local.
+  ///
+  /// Garantía de no pérdida: usa un upsert con MAX para que el valor guardado
+  /// nunca sea menor que el que ya estaba almacenado. Si el registro del día
+  /// ya existía con 5000 pasos y se llama con 3000, se conservan los 5000.
   static Future<void> saveSteps({
     required String date,
     required int steps,
     required String source,
   }) async {
     final db = await _database;
-    await db.insert(
-      'local_steps',
-      LocalStep(date: date, totalSteps: steps, source: source, synced: false).toMap(),
-      conflictAlgorithm: ConflictAlgorithm.replace,
+    // Upsert con MAX: nunca sobreescribe con un valor menor.
+    // ON CONFLICT DO UPDATE requiere SQLite ≥ 3.24 (disponible en Android 8+).
+    await db.rawInsert(
+      '''
+      INSERT INTO local_steps (date, total_steps, source, synced)
+      VALUES (?, ?, ?, 0)
+      ON CONFLICT(date) DO UPDATE SET
+        total_steps = MAX(local_steps.total_steps, excluded.total_steps),
+        source      = excluded.source,
+        synced      = CASE
+                        WHEN excluded.total_steps > local_steps.total_steps THEN 0
+                        ELSE local_steps.synced
+                      END
+      ''',
+      [date, steps, source],
     );
+  }
+
+  /// Devuelve los pasos guardados localmente para una fecha determinada.
+  /// Retorna null si no hay registro para esa fecha.
+  static Future<int?> getStepsForDate(String date) async {
+    final db = await _database;
+    final rows = await db.query(
+      'local_steps',
+      columns: ['total_steps'],
+      where: 'date = ?',
+      whereArgs: [date],
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+    return rows.first['total_steps'] as int?;
   }
 
   /// Returns all unsynced records.
@@ -60,23 +90,34 @@ class OfflineSyncService {
     );
   }
 
-  /// Flush all unsynced records to the backend if online.
-  static Future<void> flushPending() async {
+  /// Envía todos los registros pendientes al backend si hay internet.
+  /// Cada registro se intenta de forma independiente: si uno falla, los demás
+  /// siguen intentándose (no falla en cascada).
+  /// Retorna la última respuesta exitosa, o null si nada fue sincronizado.
+  static Future<Map<String, dynamic>?> flushPending() async {
     final connectivity = await Connectivity().checkConnectivity();
-    if (connectivity.contains(ConnectivityResult.none)) return;
+    if (connectivity.contains(ConnectivityResult.none)) return null;
 
     final pending = await getPending();
+    Map<String, dynamic>? lastResponse;
     for (final record in pending) {
       try {
-        await ApiService.syncSteps(record.date, record.totalSteps, source: record.source);
+        final response = await ApiService.syncSteps(
+          record.date,
+          record.totalSteps,
+          source: record.source,
+        );
         await markSynced(record.id!);
+        lastResponse = response;
       } catch (_) {
-        // Will retry on next flush
+        // El registro permanece como synced=0 y se reintentará en el próximo flush.
+        // No interrumpimos el loop para que otros registros pendientes sigan intentando.
       }
     }
+    return lastResponse;
   }
 
-  /// Listen for connectivity changes and auto-flush.
+  /// Escucha cambios de conectividad y hace flush automático al recuperar internet.
   static void listenAndSync() {
     Connectivity().onConnectivityChanged.listen((results) {
       if (!results.contains(ConnectivityResult.none)) {
@@ -85,3 +126,4 @@ class OfflineSyncService {
     });
   }
 }
+

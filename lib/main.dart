@@ -1,17 +1,43 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter_background_service/flutter_background_service.dart';
+import 'firebase_options.dart';
 import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
 import 'screens/home_shell.dart';
-import 'services/api_service.dart';
+import 'screens/splash_screen.dart';
+import 'screens/onboarding_screen.dart';
 import 'services/offline_sync_service.dart';
 import 'services/notification_service.dart';
+import 'services/notification_store.dart';
+import 'services/step_background_service.dart';
+import 'services/step_counting_service.dart';
+import 'services/analytics_service.dart';
 import 'theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await AnalyticsService.instance.init();
   await NotificationService.init();
+  await NotificationStore.instance.init();
   OfflineSyncService.listenAndSync();
+  await StepBackgroundService.initialize();
+  await StepCountingService.instance.initialize();
+
+  // Escuchar invocaciones del background service para actualizar la
+  // notificación permanente incluso cuando la app está suspendida.
+  FlutterBackgroundService().on('stepUpdate').listen((data) async {
+    final daily = data?['daily'] as int? ?? 0;
+    if (daily > 0) {
+      await NotificationService.showProgressNotification(
+        steps: daily,
+        coins: 0,
+        dailyGoal: 10000,
+      );
+    }
+  });
+
   runApp(const ExploriaApp());
 }
 
@@ -27,64 +53,20 @@ class ExploriaApp extends StatelessWidget {
       valueListenable: themeNotifier,
       builder: (_, mode, __) {
         return MaterialApp(
-          title: 'Exploria',
+          title: 'exploria_app',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.light,
           darkTheme: AppTheme.dark,
           themeMode: mode,
-          home: const AuthWrapper(),
+          home: const SplashScreen(),
           routes: {
+            '/onboarding': (context) => const OnboardingScreen(),
             '/login': (context) => const LoginScreen(),
             '/register': (context) => const RegisterScreen(),
             '/home': (context) => const HomeShell(),
           },
         );
       },
-    );
-  }
-}
-
-class AuthWrapper extends StatefulWidget {
-  const AuthWrapper({super.key});
-
-  @override
-  State<AuthWrapper> createState() => _AuthWrapperState();
-}
-
-class _AuthWrapperState extends State<AuthWrapper> {
-  @override
-  void initState() {
-    super.initState();
-    _checkAuth();
-  }
-
-  Future<void> _checkAuth() async {
-    // Solicitar permisos necesarios al primer lanzamiento
-    await _requestPermissions();
-    await ApiService.loadToken();
-    final token = await ApiService.getToken();
-
-    if (mounted) {
-      if (token != null) {
-        Navigator.pushReplacementNamed(context, '/home');
-      } else {
-        Navigator.pushReplacementNamed(context, '/login');
-      }
-    }
-  }
-
-  Future<void> _requestPermissions() async {
-    await [Permission.activityRecognition, Permission.location].request();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = themeNotifier.value == ThemeMode.dark;
-    return Scaffold(
-      backgroundColor: isDark ? AppColors.bgDark : AppColors.bgLight,
-      body: const Center(
-        child: CircularProgressIndicator(color: AppColors.primary),
-      ),
     );
   }
 }

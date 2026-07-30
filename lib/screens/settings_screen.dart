@@ -4,8 +4,11 @@ import '../services/api_service.dart';
 import '../services/health_service.dart';
 import '../services/celebration_service.dart';
 import '../services/websocket_service.dart';
+import '../services/step_background_service.dart';
+import '../services/step_counting_service.dart';
 import '../theme/app_theme.dart';
 import '../main.dart';
+import 'profile_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -17,27 +20,21 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   String _selectedSource = 'native_sensor';
   static const _storage = FlutterSecureStorage();
-  final _ageController = TextEditingController();
-  final _weightController = TextEditingController();
-  final _heightController = TextEditingController();
-  bool _profileLoading = true;
-  bool _profileSaving = false;
   bool _celebrationSoundEnabled = true;
   bool _celebrationVibrationEnabled = true;
+  bool _googleFitAuthorized = false;
+  bool _healthkitAuthorized = false;
 
   @override
   void initState() {
     super.initState();
     _loadSource();
-    _loadProfile();
     _loadCelebrationSettings();
+    _checkHealthAuth();
   }
 
   @override
   void dispose() {
-    _ageController.dispose();
-    _weightController.dispose();
-    _heightController.dispose();
     super.dispose();
   }
 
@@ -59,6 +56,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  Future<void> _checkHealthAuth() async {
+    final gfAuth = await _storage.read(key: 'google_fit_authorized');
+    final hkAuth = await _storage.read(key: 'healthkit_authorized');
+    if (mounted) {
+      setState(() {
+        _googleFitAuthorized = gfAuth == 'true';
+        _healthkitAuthorized = hkAuth == 'true';
+      });
+    }
+  }
+
   Future<void> _toggleSound(bool value) async {
     await CelebrationService.setSoundEnabled(value);
     setState(() => _celebrationSoundEnabled = value);
@@ -67,71 +75,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _toggleVibration(bool value) async {
     await CelebrationService.setVibrationEnabled(value);
     setState(() => _celebrationVibrationEnabled = value);
-  }
-
-  Future<void> _loadProfile() async {
-    try {
-      final data = await ApiService.getUserProfile();
-      if (!mounted) return;
-      setState(() {
-        _ageController.text = data['age']?.toString() ?? '';
-        _weightController.text = data['weight_kg']?.toString() ?? '';
-        _heightController.text = data['height_cm']?.toString() ?? '';
-        _profileLoading = false;
-      });
-    } catch (_) {
-      if (mounted) {
-        setState(() => _profileLoading = false);
-      }
-    }
-  }
-
-  Future<void> _saveProfile() async {
-    final age = int.tryParse(_ageController.text.trim());
-    final weight = double.tryParse(
-      _weightController.text.trim().replaceAll(',', '.'),
-    );
-    final heightText = _heightController.text.trim();
-    final height = heightText.isEmpty ? null : int.tryParse(heightText);
-
-    if (age == null || weight == null) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Completá edad y peso para guardar tus datos.'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      return;
-    }
-
-    setState(() => _profileSaving = true);
-    try {
-      await ApiService.updateUserProfile(
-        age: age,
-        weightKg: weight,
-        heightCm: height,
-      );
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Datos personales guardados.'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('No se pudo guardar. Intentá nuevamente.'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _profileSaving = false);
-    }
   }
 
   @override
@@ -264,98 +207,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 textSecondary,
               ),
 
-              const SizedBox(height: 24),
-              _buildSectionTitle('Datos personales', textSecondary),
-              const SizedBox(height: 10),
-              _buildCard(
-                isDark: isDark,
-                card: card,
-                child: _profileLoading
-                    ? const Center(
-                        child: Padding(
-                          padding: EdgeInsets.symmetric(vertical: 12),
-                          child: CircularProgressIndicator(
-                            color: AppColors.primary,
-                          ),
-                        ),
-                      )
-                    : Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Precargá tus datos para un calculo mas preciso de calorias y progreso semanal.',
-                            style: TextStyle(
-                              color: textSecondary,
-                              fontSize: 12,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _buildInput(
-                                  controller: _ageController,
-                                  label: 'Edad',
-                                  suffix: 'años',
-                                  textPrimary: textPrimary,
-                                  textSecondary: textSecondary,
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: _buildInput(
-                                  controller: _weightController,
-                                  label: 'Peso',
-                                  suffix: 'kg',
-                                  textPrimary: textPrimary,
-                                  textSecondary: textSecondary,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 10),
-                          _buildInput(
-                            controller: _heightController,
-                            label: 'Altura (opcional)',
-                            suffix: 'cm',
-                            textPrimary: textPrimary,
-                            textSecondary: textSecondary,
-                          ),
-                          const SizedBox(height: 12),
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton.icon(
-                              onPressed: _profileSaving ? null : _saveProfile,
-                              icon: _profileSaving
-                                  ? const SizedBox(
-                                      width: 16,
-                                      height: 16,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: Colors.white,
-                                      ),
-                                    )
-                                  : const Icon(Icons.save_outlined),
-                              label: Text(
-                                _profileSaving
-                                    ? 'Guardando...'
-                                    : 'Guardar datos',
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.primary,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 12,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-              ),
+              _buildHealthInstructions(isDark, card, textPrimary, textSecondary),
 
               const SizedBox(height: 24),
               _buildSectionTitle('Celebración', textSecondary),
@@ -472,7 +324,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 card: card,
                 textPrimary: textPrimary,
                 textSecondary: textSecondary,
-                onTap: () {},
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const ProfileScreen(),
+                  ),
+                ),
               ),
               _buildMenuItem(
                 icon: Icons.notifications_outlined,
@@ -554,6 +410,102 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  Widget _buildHealthInstructions(
+    bool isDark,
+    Color card,
+    Color textPrimary,
+    Color textSecondary,
+  ) {
+    final isGoogleFit = _selectedSource == 'google_fit';
+    final isHealthKit = _selectedSource == 'healthkit';
+    if (!isGoogleFit && !isHealthKit) return const SizedBox.shrink();
+
+    final isAuthorized =
+        isGoogleFit ? _googleFitAuthorized : _healthkitAuthorized;
+    final isAndroid = isGoogleFit;
+
+    if (isAuthorized) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 4),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: const Color(0xFF10B981).withAlpha(15),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: const Color(0xFF10B981).withAlpha(50),
+            ),
+          ),
+          child: Row(
+            children: [
+              const Icon(
+                Icons.check_circle_rounded,
+                color: Color(0xFF10B981),
+                size: 20,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  '${isGoogleFit ? 'Google Fit' : 'Apple Health'} está conectado. Tus pasos se sincronizarán automáticamente.',
+                  style: TextStyle(color: textPrimary, fontSize: 13),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: _buildCard(
+        isDark: isDark,
+        card: card,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withAlpha(20),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.info_outline_rounded,
+                    color: AppColors.primary,
+                    size: 18,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  '¿Cómo conectar?',
+                  style: TextStyle(
+                    color: textPrimary,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              isAndroid
+                  ? '1. Tocá "Google Fit" arriba para solicitar permisos.\n'
+                      '2. En la ventana de Google, elegí la cuenta y permití el acceso a tu actividad física.\n'
+                      '3. Una vez conectado, verás el estado "Conectado" en verde.'
+                  : '1. Tocá "Apple Health" arriba para solicitar permisos.\n'
+                      '2. En la ventana de Salud, activá la lectura de pasos.\n'
+                      '3. Una vez conectado, verás el estado "Conectado" en verde.',
+              style: TextStyle(color: textSecondary, fontSize: 12, height: 1.5),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildCard({
     required bool isDark,
     required Color card,
@@ -580,10 +532,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
     Color textSecondary,
   ) {
     final isSelected = _selectedSource == value;
+    final isGoogleFit = value == 'google_fit';
+    final isHealthKit = value == 'healthkit';
+    final isHealthSource = isGoogleFit || isHealthKit;
+    final isAuthorized =
+        isGoogleFit ? _googleFitAuthorized : (isHealthKit ? _healthkitAuthorized : false);
+
     return GestureDetector(
       onTap: () async {
-        // Request health permission if switching to a health source
-        if (value == 'google_fit' || value == 'healthkit') {
+        if (isHealthSource) {
           final granted = await HealthService.requestAuthorization();
           if (!granted && mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -596,12 +553,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
             );
             return;
           }
+          if (granted) {
+            final key = isGoogleFit ? 'google_fit_authorized' : 'healthkit_authorized';
+            await _storage.write(key: key, value: 'true');
+            if (mounted) {
+              setState(() {
+                if (isGoogleFit) _googleFitAuthorized = true;
+                if (isHealthKit) _healthkitAuthorized = true;
+              });
+            }
+          }
         }
         setState(() => _selectedSource = value);
         await _storage.write(key: 'step_source', value: value);
         try {
           await ApiService.updateStepSource(value);
         } catch (_) {}
+        await StepBackgroundService.syncWithSource();
+        await StepCountingService.instance.refreshMode();
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
@@ -635,13 +604,67 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      color: textPrimary,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          title,
+                          style: TextStyle(
+                            color: textPrimary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (isHealthSource) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isAuthorized
+                                ? const Color(0xFF10B981).withAlpha(25)
+                                : (isSelected
+                                    ? const Color(0xFFEF4444).withAlpha(25)
+                                    : Colors.grey.withAlpha(20)),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                isAuthorized
+                                    ? Icons.check_circle_rounded
+                                    : Icons.info_outline_rounded,
+                                size: 11,
+                                color: isAuthorized
+                                    ? const Color(0xFF10B981)
+                                    : (isSelected
+                                        ? const Color(0xFFEF4444)
+                                        : Colors.grey),
+                              ),
+                              const SizedBox(width: 3),
+                              Text(
+                                isAuthorized ? 'Conectado' : 'No conectado',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: isAuthorized
+                                      ? const Color(0xFF10B981)
+                                      : (isSelected
+                                          ? const Color(0xFFEF4444)
+                                          : Colors.grey),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
+                  const SizedBox(height: 2),
                   Text(
                     subtitle,
                     style: TextStyle(color: textSecondary, fontSize: 12),
@@ -656,35 +679,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 size: 22,
               ),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInput({
-    required TextEditingController controller,
-    required String label,
-    required String suffix,
-    required Color textPrimary,
-    required Color textSecondary,
-  }) {
-    return TextField(
-      controller: controller,
-      keyboardType: TextInputType.number,
-      style: TextStyle(color: textPrimary),
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: TextStyle(color: textSecondary, fontSize: 12),
-        suffixText: suffix,
-        suffixStyle: TextStyle(color: textSecondary, fontSize: 12),
-        isDense: true,
-        filled: true,
-        fillColor: Theme.of(context).brightness == Brightness.dark
-            ? AppColors.cardAltDark
-            : AppColors.bgLight,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
         ),
       ),
     );

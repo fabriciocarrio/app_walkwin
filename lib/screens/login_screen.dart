@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../services/api_service.dart';
 import '../theme/app_theme.dart';
 import 'home_shell.dart';
@@ -20,129 +21,256 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cs = Theme.of(context).colorScheme;
-    final bg = isDark ? AppColors.bgDark : AppColors.bgLight;
-    final textPrimary = isDark
-        ? AppColors.textPrimaryDark
-        : AppColors.textPrimaryLight;
-    final textSecondary = isDark
-        ? AppColors.textSecondaryDark
-        : AppColors.textSecondaryLight;
+    final bg = isDark ? AppColors.bgDark : const Color(0xFFF8FAFC); // Very light blue/gray background
+    
+    // We'll use specific colors matching the image for light mode, 
+    // but keep dark mode fallbacks just in case.
+    final titleColor = isDark ? AppColors.textPrimaryDark : const Color(0xFF112A46);
+    final subtitleColor = isDark ? AppColors.textSecondaryDark : const Color(0xFF3B4D63);
+    final labelColor = isDark ? AppColors.textPrimaryDark : const Color(0xFF112A46);
 
     return Scaffold(
       backgroundColor: bg,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+      body: Stack(
+        children: [
+          // Background Image with Fade
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: MediaQuery.of(context).size.height * 0.45,
+            child: Stack(
+              fit: StackFit.expand,
               children: [
-                const SizedBox(height: 60),
-                // Logo / hero
+                Image.asset(
+                  'assets/loginfondo.png',
+                  fit: BoxFit.cover,
+                  alignment: Alignment.bottomCenter,
+                ),
                 Container(
-                  width: 72,
-                  height: 72,
                   decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Icon(
-                    Icons.directions_walk_rounded,
-                    color: Colors.white,
-                    size: 40,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  'Exploria',
-                  style: TextStyle(
-                    color: textPrimary,
-                    fontSize: 34,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: -1,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'Explorá tu ciudad, descubrí lugares y obtené recompensas',
-                  style: TextStyle(color: textSecondary, fontSize: 15),
-                ),
-                const SizedBox(height: 48),
-                // Fields
-                _buildLabel('Email', textSecondary),
-                const SizedBox(height: 8),
-                _buildField(
-                  controller: _emailController,
-                  hint: 'tu@email.com',
-                  icon: Icons.email_outlined,
-                  keyboardType: TextInputType.emailAddress,
-                  isDark: isDark,
-                ),
-                const SizedBox(height: 18),
-                _buildLabel('Contraseña', textSecondary),
-                const SizedBox(height: 8),
-                _buildField(
-                  controller: _passwordController,
-                  hint: '••••••••',
-                  icon: Icons.lock_outline_rounded,
-                  obscureText: _obscurePassword,
-                  isDark: isDark,
-                  suffix: IconButton(
-                    icon: Icon(
-                      _obscurePassword
-                          ? Icons.visibility_off_outlined
-                          : Icons.visibility_outlined,
-                      color: textSecondary,
-                      size: 20,
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        bg,
+                        bg.withAlpha(200),
+                        bg.withAlpha(0),
+                      ],
+                      stops: const [0.0, 0.4, 1.0],
                     ),
-                    onPressed: () =>
-                        setState(() => _obscurePassword = !_obscurePassword),
                   ),
                 ),
-                const SizedBox(height: 32),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: _loading ? null : _login,
-                    child: _loading
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Text('Iniciar Sesión'),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      '¿No tenés cuenta? ',
-                      style: TextStyle(color: textSecondary),
-                    ),
-                    GestureDetector(
-                      onTap: () => Navigator.pushNamed(context, '/register'),
-                      child: Text(
-                        'Regístrate',
-                        style: TextStyle(
-                          color: cs.primary,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 40),
               ],
             ),
           ),
+          // Foreground Content
+          SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const SizedBox(height: 60),
+                    
+                    // Logo EXPLORIA
+                    Center(child: _buildLogo()),
+                    
+                    const SizedBox(height: 40),
+                    
+                    // Title
+                    Text(
+                      '¡Bienvenido!',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.montserrat(
+                        color: titleColor,
+                        fontSize: 28,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    
+                    // Subtitle
+                    Text(
+                      'Iniciá sesión para\nseguir explorando.',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.montserrat(
+                        color: subtitleColor,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        height: 1.4,
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 48),
+                    
+                    // Fields
+                    _buildLabel('Email', labelColor),
+                    const SizedBox(height: 8),
+                    _buildField(
+                      controller: _emailController,
+                      hint: 'tu@email.com',
+                      keyboardType: TextInputType.emailAddress,
+                      isDark: isDark,
+                    ),
+                    
+                    const SizedBox(height: 24),
+                    
+                    _buildLabel('Contraseña', labelColor),
+                    const SizedBox(height: 8),
+                    _buildField(
+                      controller: _passwordController,
+                      hint: '••••••••',
+                      obscureText: _obscurePassword,
+                      isDark: isDark,
+                      suffix: IconButton(
+                        icon: Icon(
+                          _obscurePassword
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined,
+                          color: subtitleColor,
+                          size: 22,
+                        ),
+                        onPressed: () =>
+                            setState(() => _obscurePassword = !_obscurePassword),
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 12),
+                    
+                    // Forgot Password
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: GestureDetector(
+                        onTap: () {
+                          // Acción de recuperar contraseña
+                        },
+                        child: Text(
+                          '¿Olvidaste tu contraseña?',
+                          style: GoogleFonts.montserrat(
+                            color: const Color(0xFF0056D2), // Blue link color
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 32),
+                    
+                    // Login Button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 56,
+                      child: ElevatedButton(
+                        onPressed: _loading ? null : _login,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF1877F2), // Bright blue
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                        child: _loading
+                            ? const SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : Text(
+                                'Iniciar sesión',
+                                style: GoogleFonts.montserrat(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 48),
+                    
+                    // Register Link
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          '¿No tenés cuenta? ',
+                          style: GoogleFonts.montserrat(
+                            color: subtitleColor,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () => Navigator.pushNamed(context, '/register'),
+                          child: Text(
+                            'Registrarme',
+                            style: GoogleFonts.montserrat(
+                              color: const Color(0xFF1877F2),
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 40),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLogo() {
+    return RichText(
+      text: TextSpan(
+        style: GoogleFonts.montserrat(
+          fontSize: 32,
+          fontWeight: FontWeight.w900,
+          color: const Color(0xFF112A46),
+          letterSpacing: 1.5,
         ),
+        children: [
+          const TextSpan(text: 'EXPL'),
+          WidgetSpan(
+            alignment: PlaceholderAlignment.middle,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 2.0),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  const Icon(
+                    Icons.location_on,
+                    size: 36,
+                    color: Color(0xFF20D4A4), // Cyan/Green color of the pin
+                  ),
+                  Positioned(
+                    top: 8,
+                    child: Container(
+                      width: 10,
+                      height: 10,
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const TextSpan(text: 'RIA'),
+        ],
       ),
     );
   }
@@ -150,36 +278,56 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget _buildLabel(String text, Color color) {
     return Text(
       text,
-      style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.w600),
+      style: GoogleFonts.montserrat(
+        color: color, 
+        fontSize: 14, 
+        fontWeight: FontWeight.w700,
+      ),
     );
   }
 
   Widget _buildField({
     required TextEditingController controller,
     required String hint,
-    required IconData icon,
     required bool isDark,
     TextInputType? keyboardType,
     bool obscureText = false,
     Widget? suffix,
   }) {
-    final card = isDark ? AppColors.cardDark : AppColors.cardLight;
-    final textSecondary = isDark
-        ? AppColors.textSecondaryDark
-        : AppColors.textSecondaryLight;
-    final textPrimary = isDark
-        ? AppColors.textPrimaryDark
-        : AppColors.textPrimaryLight;
+    final card = isDark ? AppColors.cardDark : Colors.white;
+    final textPrimary = isDark ? AppColors.textPrimaryDark : const Color(0xFF112A46);
+    final borderColor = isDark ? Colors.transparent : const Color(0xFFE2E8F0);
+    final hintColor = isDark ? AppColors.textSecondaryDark : const Color(0xFF64748B);
+
     return TextFormField(
       controller: controller,
       keyboardType: keyboardType,
       obscureText: obscureText,
-      style: TextStyle(color: textPrimary),
+      style: GoogleFonts.montserrat(
+        color: textPrimary,
+        fontWeight: FontWeight.w500,
+      ),
       decoration: InputDecoration(
         hintText: hint,
+        hintStyle: GoogleFonts.montserrat(
+          color: hintColor,
+          fontWeight: FontWeight.w500,
+        ),
         filled: true,
         fillColor: card,
-        prefixIcon: Icon(icon, color: textSecondary, size: 20),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: borderColor),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: borderColor),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFF1877F2), width: 2),
+        ),
         suffixIcon: suffix,
       ),
       validator: (v) {
@@ -205,8 +353,12 @@ class _LoginScreenState extends State<LoginScreen> {
       } else {
         _showError(result['message'] ?? 'Error al iniciar sesión');
       }
-    } catch (e) {
-      _showError('Error de conexión');
+    } catch (e, stackTrace) {
+      debugPrint('================ ERROR DE LOGIN ================');
+      debugPrint('Error: $e');
+      debugPrint('Stacktrace: $stackTrace');
+      debugPrint('================================================');
+      _showError('Error de conexión: $e');
     } finally {
       if (mounted) setState(() => _loading = false);
     }

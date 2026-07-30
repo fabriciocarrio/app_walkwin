@@ -1,10 +1,13 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 import '../services/api_service.dart';
+import '../config/app_config.dart';
 import '../models/models.dart';
 import '../theme/app_theme.dart';
 import 'business_profile_screen.dart';
@@ -13,14 +16,21 @@ import 'tourist_poi_profile_screen.dart';
 
 class MapScreen extends StatefulWidget {
   final Business? initialBusiness;
+  final bool isActive;
 
-  const MapScreen({super.key, this.initialBusiness});
+  const MapScreen({super.key, this.initialBusiness, this.isActive = false});
 
   @override
   State<MapScreen> createState() => _MapScreenState();
 }
 
-class _MapScreenState extends State<MapScreen> {
+class _MapScreenState extends State<MapScreen>
+    with WidgetsBindingObserver, TickerProviderStateMixin {
+  static const _storage = FlutterSecureStorage();
+  static const _spawnClaimDateKey = 'spawn_claim_date';
+  static const _spawnClaimCountKey = 'spawn_claim_count';
+  static const int _maxDailySpawnClaims = 5;
+
   final MapController _mapController = MapController();
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocus = FocusNode();
@@ -44,40 +54,432 @@ class _MapScreenState extends State<MapScreen> {
   bool _showTouristPois = true;
   bool _showDynamicSpawns = true;
 
+  // ── Filtros del buscador ──────────────────────────────────
+  double? _filterMaxDistanceM; // null = sin límite
+  bool _filterOnlyWithOffer = false;
+  bool _filterOnlyNotVisited = false;
+  String _filterSortBy = 'distance'; // 'distance' | 'name' | 'reward'
+
+  bool get _hasActiveFilters =>
+      _filterMaxDistanceM != null ||
+      _filterOnlyWithOffer ||
+      _filterOnlyNotVisited ||
+      _filterSortBy != 'distance';
+  int _todaySpawnClaims = 0;
+  bool _spawnLimitReached = false;
+  bool _generatingSpawns = false;
+
+  Timer? _midnightSpawnResetTimer;
+
   // GPS - se sobreescribe con la ubicación real. Fallback: centro de San Juan
   LatLng _currentLocation = const LatLng(-31.5375, -68.5364);
+  StreamSubscription<Position>? _positionSubscription;
+  late final AnimationController _pulseController;
+  late final Animation<double> _pulseAnimation;
+  String? _avatarUrl;
 
   @override
   void initState() {
     super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat(reverse: true);
+    _pulseAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+    WidgetsBinding.instance.addObserver(this);
     _searchFocus.addListener(() {
       setState(
         () => _searchOpen =
             _searchFocus.hasFocus && _searchController.text.isNotEmpty,
       );
     });
-    _initLocation();
+    _initSpawnClaimCount();
+    _scheduleMidnightSpawnReset();
+    _loadAvatar();
+    if (widget.isActive) {
+      _initLocation().then((_) => _startLocationUpdates());
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && widget.isActive) {
+      _initGps().then((_) => _startLocationUpdates());
+    } else if (state == AppLifecycleState.paused) {
+      _stopGps();
+    }
+  }
+
+  @override
+  void didUpdateWidget(MapScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isActive && !oldWidget.isActive) {
+      _initGps().then((_) => _startLocationUpdates());
+    } else if (!widget.isActive && oldWidget.isActive) {
+      _stopGps();
+    }
+  }
+
+  void _stopGps() {
+    _positionSubscription?.cancel();
+    _positionSubscription = null;
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _positionSubscription?.cancel();
     _searchController.dispose();
     _searchFocus.dispose();
+    _midnightSpawnResetTimer?.cancel();
+    _pulseController.dispose();
     super.dispose();
   }
 
   void _filterBusinesses(String query) {
+    _applyFilters(query: query);
+  }
+
+  /// Aplica búsqueda textual + todos los filtros activos a [_businesses]
+  /// y actualiza [_filteredBusinesses].
+  void _applyFilters({String? query}) {
+    final q = (query ?? _searchController.text).toLowerCase();
     setState(() {
-      if (query.isEmpty) {
-        _filteredBusinesses = _businesses;
-        _searchOpen = false;
-      } else {
-        _filteredBusinesses = _businesses
-            .where((b) => b.name.toLowerCase().contains(query.toLowerCase()))
-            .toList();
-        _searchOpen = _searchFocus.hasFocus;
+      var result = _businesses.where((b) {
+        // Búsqueda textual
+        if (q.isNotEmpty && !b.name.toLowerCase().contains(q)) return false;
+        // Distancia máxima
+        if (_filterMaxDistanceM != null) {
+          final dist = _distanceTo(b);
+          if (!dist.isInfinite && dist > _filterMaxDistanceM!) return false;
+        }
+        // Solo con oferta activa
+        if (_filterOnlyWithOffer && (b.offer == null || b.offer!.isEmpty)) {
+          return false;
+        }
+        // Solo no visitados hoy
+        if (_filterOnlyNotVisited && b.checkedInToday) return false;
+        return true;
+      }).toList();
+
+      // Ordenamiento
+      switch (_filterSortBy) {
+        case 'name':
+          result.sort((a, b) => a.name.compareTo(b.name));
+          break;
+        case 'reward':
+          result.sort((a, b) => b.checkinRewardCoins.compareTo(a.checkinRewardCoins));
+          break;
+        case 'distance':
+        default:
+          result.sort((a, b) => _distanceTo(a).compareTo(_distanceTo(b)));
       }
+
+      _filteredBusinesses = result;
+      _searchOpen = q.isNotEmpty && _searchFocus.hasFocus;
     });
+  }
+
+  /// Abre el bottom sheet de filtros con diseño premium.
+  void _showFilterSheet(bool isDark, Color card, Color textPrimary, Color textSecondary) {
+    // Valores temporales que se aplican solo al confirmar
+    double? tempMaxDist = _filterMaxDistanceM;
+    bool tempOnlyOffer = _filterOnlyWithOffer;
+    bool tempOnlyNotVisited = _filterOnlyNotVisited;
+    String tempSort = _filterSortBy;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            final primary = AppColors.primary;
+
+            Widget sectionLabel(String text) => Padding(
+              padding: const EdgeInsets.only(bottom: 10, top: 4),
+              child: Text(
+                text,
+                style: TextStyle(
+                  color: textSecondary,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.1,
+                ),
+              ),
+            );
+
+            Widget distanceChip(String label, double? value) {
+              final selected = tempMaxDist == value;
+              return GestureDetector(
+                onTap: () => setSheetState(() => tempMaxDist = value),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 160),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: selected ? primary : (isDark ? Colors.white.withAlpha(12) : Colors.black.withAlpha(6)),
+                    borderRadius: BorderRadius.circular(50),
+                    border: Border.all(
+                      color: selected ? primary : (isDark ? Colors.white.withAlpha(30) : Colors.black.withAlpha(20)),
+                    ),
+                  ),
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      color: selected ? Colors.white : textPrimary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              );
+            }
+
+            Widget sortChip(String label, String value, IconData icon) {
+              final selected = tempSort == value;
+              return GestureDetector(
+                onTap: () => setSheetState(() => tempSort = value),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 160),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: selected ? primary : (isDark ? Colors.white.withAlpha(12) : Colors.black.withAlpha(6)),
+                    borderRadius: BorderRadius.circular(50),
+                    border: Border.all(
+                      color: selected ? primary : (isDark ? Colors.white.withAlpha(30) : Colors.black.withAlpha(20)),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(icon, size: 14, color: selected ? Colors.white : textSecondary),
+                      const SizedBox(width: 6),
+                      Text(
+                        label,
+                        style: TextStyle(
+                          color: selected ? Colors.white : textPrimary,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+
+            Widget toggleRow(String label, String subtitle, IconData icon, Color iconColor, bool value, ValueChanged<bool> onChanged) {
+              return GestureDetector(
+                onTap: () => setSheetState(() => onChanged(!value)),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  decoration: BoxDecoration(
+                    color: value
+                        ? iconColor.withAlpha(isDark ? 30 : 15)
+                        : (isDark ? Colors.white.withAlpha(8) : Colors.black.withAlpha(4)),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: value ? iconColor.withAlpha(120) : Colors.transparent,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: iconColor.withAlpha(isDark ? 40 : 20),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(icon, color: iconColor, size: 18),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(label, style: TextStyle(color: textPrimary, fontSize: 14, fontWeight: FontWeight.w600)),
+                            Text(subtitle, style: TextStyle(color: textSecondary, fontSize: 12)),
+                          ],
+                        ),
+                      ),
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 180),
+                        width: 46,
+                        height: 26,
+                        decoration: BoxDecoration(
+                          color: value ? iconColor : (isDark ? Colors.white.withAlpha(30) : Colors.black.withAlpha(20)),
+                          borderRadius: BorderRadius.circular(13),
+                        ),
+                        child: AnimatedAlign(
+                          duration: const Duration(milliseconds: 180),
+                          alignment: value ? Alignment.centerRight : Alignment.centerLeft,
+                          child: Container(
+                            margin: const EdgeInsets.all(3),
+                            width: 20,
+                            height: 20,
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+
+            return Container(
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1C1C2E) : Colors.white,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+              ),
+              padding: EdgeInsets.only(
+                left: 20,
+                right: 20,
+                top: 12,
+                bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Handle + título
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: isDark ? Colors.white.withAlpha(40) : Colors.black.withAlpha(20),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: primary.withAlpha(20),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(Icons.tune_rounded, color: primary, size: 20),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Filtrar comercios',
+                        style: TextStyle(
+                          color: textPrimary,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const Spacer(),
+                      // Botón limpiar
+                      TextButton(
+                        onPressed: () => setSheetState(() {
+                          tempMaxDist = null;
+                          tempOnlyOffer = false;
+                          tempOnlyNotVisited = false;
+                          tempSort = 'distance';
+                        }),
+                        child: Text('Limpiar', style: TextStyle(color: primary, fontWeight: FontWeight.w600)),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+
+                  // ── Distancia máxima ──────────────────────────
+                  sectionLabel('DISTANCIA MÁXIMA'),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      distanceChip('Todos', null),
+                      distanceChip('< 500m', 500),
+                      distanceChip('< 1km', 1000),
+                      distanceChip('< 3km', 3000),
+                      distanceChip('< 5km', 5000),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+
+                  // ── Ordenar por ───────────────────────────────
+                  sectionLabel('ORDENAR POR'),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      sortChip('Más cercano', 'distance', Icons.near_me_rounded),
+                      sortChip('Nombre A-Z', 'name', Icons.sort_by_alpha_rounded),
+                      sortChip('Mayor recompensa', 'reward', Icons.eco_rounded),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+
+                  // ── Mostrar solo ──────────────────────────────
+                  sectionLabel('MOSTRAR SOLO'),
+                  toggleRow(
+                    'Con oferta activa',
+                    'Comercios que tienen descuentos disponibles',
+                    Icons.local_offer_rounded,
+                    const Color(0xFF4CAF50),
+                    tempOnlyOffer,
+                    (v) => tempOnlyOffer = v,
+                  ),
+                  const SizedBox(height: 10),
+                  toggleRow(
+                    'Sin visitar hoy',
+                    'Lugares donde todavía no hiciste check-in',
+                    Icons.check_circle_outline_rounded,
+                    const Color(0xFF2196F3),
+                    tempOnlyNotVisited,
+                    (v) => tempOnlyNotVisited = v,
+                  ),
+                  const SizedBox(height: 24),
+
+                  // ── Botón Aplicar ─────────────────────────────
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        elevation: 0,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _filterMaxDistanceM = tempMaxDist;
+                          _filterOnlyWithOffer = tempOnlyOffer;
+                          _filterOnlyNotVisited = tempOnlyNotVisited;
+                          _filterSortBy = tempSort;
+                        });
+                        _applyFilters();
+                        Navigator.of(ctx).pop();
+                      },
+                      child: const Text(
+                        'Aplicar filtros',
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   void _selectBusiness(Business b) {
@@ -98,22 +500,34 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
+  Future<void> _loadAvatar() async {
+    try {
+      final data = await ApiService.getUserProfile();
+      if (!mounted) return;
+      final avatarId = data['avatar']?.toString();
+      if (avatarId != null) {
+        final base = AppConfig.apiBaseUrl.replaceAll(RegExp(r'/api/v1/?$'), '');
+        setState(() => _avatarUrl = '$base/img-profile/$avatarId');
+      }
+    } catch (_) {}
+  }
+
   Future<void> _initLocation() async {
+    await _initGps();
+    _loadBusinesses();
+    _loadExplorationData();
+  }
+
+  Future<void> _initGps() async {
     try {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        _loadBusinesses();
-        _loadExplorationData();
-        return;
-      }
+      if (!serviceEnabled) return;
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
       }
       if (permission == LocationPermission.deniedForever ||
           permission == LocationPermission.denied) {
-        _loadBusinesses();
-        _loadExplorationData();
         return;
       }
       final pos = await Geolocator.getCurrentPosition(
@@ -125,14 +539,88 @@ class _MapScreenState extends State<MapScreen> {
         setState(() {
           _currentLocation = LatLng(pos.latitude, pos.longitude);
         });
-        // Mover el mapa a la ubicación real
         WidgetsBinding.instance.addPostFrameCallback((_) {
           _mapController.move(_currentLocation, 15);
         });
       }
     } catch (_) {}
-    _loadBusinesses();
-    _loadExplorationData();
+  }
+
+  Future<void> _startLocationUpdates() async {
+    _positionSubscription?.cancel();
+    final permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
+      return;
+    }
+    _positionSubscription =
+        Geolocator.getPositionStream(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.medium,
+            distanceFilter: 10,
+          ),
+        ).listen(
+          (pos) {
+            if (!mounted) return;
+            setState(() {
+              _currentLocation = LatLng(pos.latitude, pos.longitude);
+            });
+          },
+          onError: (_) {
+            // GPS denegado o error del sensor — se ignora silenciosamente
+          },
+        );
+  }
+
+  String _todayKey() {
+    final now = DateTime.now().toUtc().subtract(const Duration(hours: 3));
+    return '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+  }
+
+  Future<void> _initSpawnClaimCount() async {
+    final date = await _storage.read(key: _spawnClaimDateKey);
+    final countStr = await _storage.read(key: _spawnClaimCountKey);
+    if (date == _todayKey() && countStr != null) {
+      _todaySpawnClaims = int.tryParse(countStr) ?? 0;
+    } else {
+      _todaySpawnClaims = 0;
+      await _storage.write(key: _spawnClaimDateKey, value: _todayKey());
+      await _storage.write(key: _spawnClaimCountKey, value: '0');
+    }
+    if (_todaySpawnClaims >= _maxDailySpawnClaims) {
+      _spawnLimitReached = true;
+    }
+  }
+
+  Future<void> _incrementSpawnCount() async {
+    _todaySpawnClaims++;
+    await _storage.write(
+      key: _spawnClaimCountKey,
+      value: _todaySpawnClaims.toString(),
+    );
+    if (_todaySpawnClaims >= _maxDailySpawnClaims) {
+      setState(() {
+        _spawnLimitReached = true;
+        _collectibleSpawns = [];
+        _selectedSpawn = null;
+      });
+    }
+  }
+
+  void _scheduleMidnightSpawnReset() {
+    _midnightSpawnResetTimer?.cancel();
+    final nowUtc = DateTime.now().toUtc();
+    final arNow = DateTime.now().toUtc().subtract(const Duration(hours: 3));
+    final nextArMidnightUtc = DateTime.utc(
+      arNow.year,
+      arNow.month,
+      arNow.day,
+    ).add(const Duration(days: 1, hours: 3));
+    final wait = nextArMidnightUtc.difference(nowUtc);
+    _midnightSpawnResetTimer = Timer(wait, () {
+      _initSpawnClaimCount();
+      _scheduleMidnightSpawnReset();
+    });
   }
 
   Future<void> _refreshExplorationIfNeeded() async {
@@ -153,6 +641,7 @@ class _MapScreenState extends State<MapScreen> {
       final mapNearby = await ApiService.getMapNearbyPoints(
         lat: _currentLocation.latitude,
         lng: _currentLocation.longitude,
+        radiusM: 5000,
       );
       final mapData = _extractMapNearbyData(mapNearby);
       final mapState = await ApiService.getExplorationMapState(
@@ -165,16 +654,16 @@ class _MapScreenState extends State<MapScreen> {
           : (missions['missions'] as List<dynamic>? ?? []);
 
       if (!mounted) return;
-        final businessesData =
+      final businessesData =
           (mapData['businesses'] as List<dynamic>?) ??
           (mapData['shops'] as List<dynamic>?) ??
           const [];
-        final touristLocationsData =
+      final touristLocationsData =
           (mapData['tourist_locations'] as List<dynamic>?) ??
           (mapData['touristLocations'] as List<dynamic>?) ??
           (mapData['pois'] as List<dynamic>?) ??
           const [];
-        final dynamicSpawnsData =
+      final dynamicSpawnsData =
           (mapData['dynamic_spawns'] as List<dynamic>?) ??
           (mapData['collectible_spawns'] as List<dynamic>?) ??
           (mapData['spawns'] as List<dynamic>?) ??
@@ -197,9 +686,16 @@ class _MapScreenState extends State<MapScreen> {
         _nearbyPois = touristLocationsData
             .map((e) => ExplorationPoi.fromJson(e as Map<String, dynamic>))
             .toList();
-        _collectibleSpawns = dynamicSpawnsData
-            .map((e) => CollectibleSpawnDto.fromJson(e as Map<String, dynamic>))
-            .toList();
+        if (_spawnLimitReached) {
+          _collectibleSpawns = [];
+        } else {
+          _collectibleSpawns = dynamicSpawnsData
+              .map(
+                (e) => CollectibleSpawnDto.fromJson(e as Map<String, dynamic>),
+              )
+              .where((s) => !s.claimed)
+              .toList();
+        }
         _exploredTiles =
             (mapState['data']?['explored_tiles'] as List<dynamic>? ?? [])
                 .map((e) => ExploredTile.fromJson(e as Map<String, dynamic>))
@@ -223,6 +719,7 @@ class _MapScreenState extends State<MapScreen> {
       final mapNearby = await ApiService.getMapNearbyPoints(
         lat: _currentLocation.latitude,
         lng: _currentLocation.longitude,
+        radiusM: 5000,
       );
       if (mounted) {
         final data = _extractMapNearbyData(mapNearby);
@@ -391,8 +888,8 @@ class _MapScreenState extends State<MapScreen> {
                     // Marcador de ubicación actual del usuario
                     Marker(
                       point: _currentLocation,
-                      width: 48,
-                      height: 48,
+                      width: 64,
+                      height: 64,
                       child: _buildUserMarker(),
                     ),
                     if (_showBusinesses)
@@ -459,7 +956,7 @@ class _MapScreenState extends State<MapScreen> {
                           ),
                         ),
                       ),
-                    if (_showDynamicSpawns)
+                    if (_showDynamicSpawns && !_spawnLimitReached)
                       ..._collectibleSpawns.map(
                         (s) => Marker(
                           point: LatLng(s.lat, s.lng),
@@ -551,6 +1048,38 @@ class _MapScreenState extends State<MapScreen> {
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: _buildMapFilters(isDark, card, textPrimary),
+              ),
+            ),
+            // Botón "Generar puntos dinámicos"
+            Positioned(
+              bottom:
+                  (_selectedBusiness != null ||
+                      _selectedPoi != null ||
+                      _selectedSpawn != null)
+                  ? 280
+                  : 84,
+              right: 16,
+              child: FloatingActionButton.small(
+                heroTag: 'generate_spawns',
+                backgroundColor: _generatingSpawns
+                    ? const Color(0xFF7C4DFF).withAlpha(150)
+                    : const Color(0xFF7C4DFF),
+                onPressed: _generatingSpawns
+                    ? null
+                    : () => _generateDynamicSpawns(),
+                child: _generatingSpawns
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(
+                        Icons.auto_awesome,
+                        color: Colors.white,
+                      ),
               ),
             ),
             // Botón "Mi ubicación"
@@ -665,31 +1194,61 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
+  Widget _avatarFallback() {
+    return Container(
+      decoration: const BoxDecoration(
+        shape: BoxShape.circle,
+        color: AppColors.primary,
+      ),
+    );
+  }
+
   Widget _buildUserMarker() {
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: AppColors.primary.withAlpha(30),
-          ),
+    return AnimatedBuilder(
+      animation: _pulseAnimation,
+      builder: (context, child) {
+        final scale = 1.0 + 0.14 * _pulseAnimation.value;
+        final opacity = 0.2 - 0.07 * _pulseAnimation.value;
+        return Stack(
+          alignment: Alignment.center,
+          children: [
+            Transform.scale(
+              scale: scale,
+              child: Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.primary.withOpacity(opacity),
+                ),
+              ),
+            ),
+            child!,
+          ],
+        );
+      },
+      child: Container(
+        width: 24,
+        height: 24,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white, width: 2.5),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withAlpha(60), blurRadius: 6),
+          ],
         ),
-        Container(
-          width: 22,
-          height: 22,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: AppColors.primary,
-            border: Border.all(color: Colors.white, width: 3),
-            boxShadow: [
-              BoxShadow(color: AppColors.primary.withAlpha(120), blurRadius: 8),
-            ],
-          ),
+        child: ClipOval(
+          child: _avatarUrl != null
+              ? Image.network(
+                  _avatarUrl!,
+                  fit: BoxFit.cover,
+                  loadingBuilder: (_, child, progress) =>
+                      progress == null ? child : _avatarFallback(),
+                  errorBuilder: (_, __, ___) => _avatarFallback(),
+                )
+              : _avatarFallback(),
         ),
-      ],
+      ),
     );
   }
 
@@ -737,45 +1296,65 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   Widget _buildMapFilters(bool isDark, Color card, Color textPrimary) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: card.withAlpha(isDark ? 235 : 245),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(isDark ? 70 : 20),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          _filterChip(
-            label: 'Comercios',
-            icon: Icons.store_mall_directory_rounded,
-            color: AppColors.primary,
-            selected: _showBusinesses,
-            onTap: () => setState(() => _showBusinesses = !_showBusinesses),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+          decoration: BoxDecoration(
+            color: card.withAlpha(isDark ? 235 : 245),
+            borderRadius: BorderRadius.circular(999),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withAlpha(isDark ? 70 : 20),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
-          _filterChip(
-            label: 'Turísticos',
-            icon: Icons.tips_and_updates_rounded,
-            color: const Color(0xFFFFC857),
-            selected: _showTouristPois,
-            onTap: () => setState(() => _showTouristPois = !_showTouristPois),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _filterChip(
+                label: 'Comercios',
+                icon: Icons.store_mall_directory_rounded,
+                color: AppColors.primary,
+                selected: _showBusinesses,
+                onTap: () => setState(() => _showBusinesses = !_showBusinesses),
+              ),
+              const SizedBox(width: 6),
+              _filterChip(
+                label: 'Turísticos',
+                icon: Icons.tips_and_updates_rounded,
+                color: const Color(0xFFFFC857),
+                selected: _showTouristPois,
+                onTap: () => setState(() => _showTouristPois = !_showTouristPois),
+              ),
+            ],
           ),
-          _filterChip(
-            label: 'Dinámicos',
-            icon: Icons.auto_awesome,
-            color: const Color(0xFF7C4DFF),
-            selected: _showDynamicSpawns,
-            onTap: () =>
-                setState(() => _showDynamicSpawns = !_showDynamicSpawns),
+        ),
+        const SizedBox(width: 8),
+        Container(
+          decoration: BoxDecoration(
+            color: card.withAlpha(isDark ? 235 : 245),
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withAlpha(isDark ? 70 : 20),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
+          child: IconButton(
+            icon: Icon(Icons.layers_rounded, color: textPrimary, size: 22),
+            onPressed: () {},
+            padding: const EdgeInsets.all(12),
+            constraints: const BoxConstraints(),
+          ),
+        ),
         ],
       ),
     );
@@ -832,14 +1411,14 @@ class _MapScreenState extends State<MapScreen> {
       children: [
         // ── Barra de búsqueda ────────────────────────────────
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          padding: const EdgeInsets.fromLTRB(16, 4, 8, 4),
           decoration: BoxDecoration(
             color: card,
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(999),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withAlpha(isDark ? 80 : 25),
-                blurRadius: 16,
+                color: Colors.black.withAlpha(isDark ? 80 : 15),
+                blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
             ],
@@ -859,7 +1438,7 @@ class _MapScreenState extends State<MapScreen> {
                   onChanged: _filterBusinesses,
                   style: TextStyle(color: textPrimary, fontSize: 14),
                   decoration: InputDecoration(
-                    hintText: 'Buscar comercios...',
+                    hintText: 'Buscar comercios, lugares...',
                     hintStyle: TextStyle(color: textSecondary, fontSize: 14),
                     border: InputBorder.none,
                     isDense: true,
@@ -874,12 +1453,52 @@ class _MapScreenState extends State<MapScreen> {
                     _filterBusinesses('');
                     _searchFocus.unfocus();
                   },
-                  child: Icon(
-                    Icons.close_rounded,
-                    color: textSecondary,
-                    size: 18,
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 8.0),
+                    child: Icon(
+                      Icons.close_rounded,
+                      color: textSecondary,
+                      size: 18,
+                    ),
                   ),
                 ),
+              // Badge de filtros activos + botón
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      color: _hasActiveFilters
+                          ? AppColors.primary.withAlpha(isDark ? 60 : 30)
+                          : AppColors.primary.withAlpha(isDark ? 40 : 20),
+                      shape: BoxShape.circle,
+                    ),
+                    child: IconButton(
+                      icon: Icon(
+                        Icons.tune_rounded,
+                        size: 18,
+                        color: _hasActiveFilters ? AppColors.primary : AppColors.primary,
+                      ),
+                      onPressed: () => _showFilterSheet(isDark, card, textPrimary, textSecondary),
+                      constraints: const BoxConstraints(),
+                      padding: const EdgeInsets.all(8),
+                    ),
+                  ),
+                  if (_hasActiveFilters)
+                    Positioned(
+                      top: -2,
+                      right: -2,
+                      child: Container(
+                        width: 10,
+                        height: 10,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFFF4757),
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ],
           ),
         ),
@@ -1517,6 +2136,7 @@ class _MapScreenState extends State<MapScreen> {
   ) {
     final withinRange = spawn.distanceM <= spawn.interactionRadiusMeters;
     final alreadyClaimed = spawn.claimed;
+    final remaining = _maxDailySpawnClaims - _todaySpawnClaims;
     return Container(
       decoration: BoxDecoration(
         color: card,
@@ -1546,6 +2166,14 @@ class _MapScreenState extends State<MapScreen> {
                         color: textPrimary,
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    Text(
+                      'Hoy: $remaining/$_maxDailySpawnClaims',
+                      style: TextStyle(
+                        color: const Color(0xFF7C4DFF),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                     if (spawn.department != null)
@@ -1873,6 +2501,23 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   Future<void> _collectSpawn(CollectibleSpawnDto spawn) async {
+    if (_todaySpawnClaims >= _maxDailySpawnClaims) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text(
+            'Ya reclamaste tus 5 puntos dinámicos de hoy. Volvé mañana.',
+          ),
+          backgroundColor: Colors.orange.shade700,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      );
+      return;
+    }
+
     setState(() => _claimingExploration = true);
     try {
       final result = await ApiService.claimMapDynamicSpawn(
@@ -1900,6 +2545,7 @@ class _MapScreenState extends State<MapScreen> {
         ),
       );
       if (ok) {
+        await _incrementSpawnCount();
         setState(() => _selectedSpawn = null);
         await _loadExplorationData();
       }
@@ -1917,6 +2563,52 @@ class _MapScreenState extends State<MapScreen> {
       );
     } finally {
       if (mounted) setState(() => _claimingExploration = false);
+    }
+  }
+
+  Future<void> _generateDynamicSpawns() async {
+    setState(() => _generatingSpawns = true);
+    try {
+      final result = await ApiService.generateDynamicSpawns(
+        lat: _currentLocation.latitude,
+        lng: _currentLocation.longitude,
+      );
+
+      if (!mounted) return;
+      final ok = result['success'] == true;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            ok
+                ? (result['message'] ?? 'Puntos generados correctamente')
+                : (result['message'] ?? 'Error al generar puntos'),
+          ),
+          backgroundColor: ok
+              ? const Color(0xFF7C4DFF)
+              : Colors.orange.shade700,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      );
+      if (ok) {
+        await _loadExplorationData();
+      }
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Error de conexión al generar puntos'),
+          backgroundColor: Colors.red.shade700,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _generatingSpawns = false);
     }
   }
 

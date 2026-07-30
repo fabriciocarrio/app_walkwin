@@ -3,12 +3,12 @@ class AppConfig {
 
   static const String environment = String.fromEnvironment(
     'APP_ENV',
-    defaultValue: 'dev',
+    defaultValue: 'prod',
   );
 
   static const String apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://192.168.1.3:8000/api/v1',
+    defaultValue: 'http://walkwin.site/api/v1',
   );
 
   static const String wsAppKey = String.fromEnvironment(
@@ -36,5 +36,16 @@ class AppConfig {
   static const bool wsEnable = bool.fromEnvironment(
     'WS_ENABLE',
     defaultValue: true,
+  );
+
+  // PostHog
+  static const String posthogApiKey = String.fromEnvironment(
+    'POSTHOG_API_KEY',
+    defaultValue: '',
+  );
+
+  static const String posthogHost = String.fromEnvironment(
+    'POSTHOG_HOST',
+    defaultValue: 'https://eu.posthog.com',
   );
 }

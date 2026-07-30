@@ -15,7 +15,7 @@ class BusinessProfileScreen extends StatefulWidget {
 class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
   int _peBalance = 0;
   bool _loadingBalance = true;
-  bool _purchasing = false;
+  String? _purchasingOfferId;
 
   @override
   void initState() {
@@ -37,37 +37,33 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
     }
   }
 
-  Future<void> _purchaseCoupon() async {
-    setState(() => _purchasing = true);
+  Future<void> _purchaseOffer(BusinessOffer offer) async {
+    setState(() => _purchasingOfferId = offer.id);
     try {
       final result = await ApiService.purchaseCoupon(
         widget.business.id,
         currency: 'pe',
+        offerId: offer.id,
       );
       if (!mounted) return;
 
-      if (result['qr_code_hash'] != null || result['id'] != null) {
-        // Éxito — actualizar saldo local
-        setState(() {
-          _peBalance =
-              result['new_balance'] ?? _peBalance - widget.business.offerCost;
-          _purchasing = false;
-        });
-        _showResultDialog(
-          success: true,
-          message: '¡Cupón canjeado! Mostrá el QR en el comercio.',
-        );
-      } else {
-        setState(() => _purchasing = false);
-        _showResultDialog(
-          success: false,
-          message: result['error'] ?? 'No se pudo canjear el cupón.',
-        );
+      setState(() {
+        _peBalance = result['new_balance'] ?? _peBalance - offer.peCost;
+        _purchasingOfferId = null;
+      });
+      _showResultDialog(
+        success: true,
+        message: 'Cupón canjeado! Mostrá el QR en el comercio.',
+      );
+    } on ApiException catch (e) {
+      if (mounted) {
+        setState(() => _purchasingOfferId = null);
+        _showResultDialog(success: false, message: e.message);
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _purchasing = false);
-        _showResultDialog(success: false, message: 'Error de conexión.');
+        setState(() => _purchasingOfferId = null);
+        _showResultDialog(success: false, message: e.toString());
       }
     }
   }
@@ -116,14 +112,11 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
         : AppColors.textSecondaryLight;
 
     final b = widget.business;
-    final hasOffer = b.offer != null && b.offerCost > 0;
-    final canRedeem = _peBalance >= b.offerCost;
 
     return Scaffold(
       backgroundColor: bg,
       body: CustomScrollView(
         slivers: [
-          // ── App bar con imagen ──────────────────────────────
           SliverAppBar(
             expandedHeight: 220,
             pinned: true,
@@ -159,7 +152,6 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // ── Nombre + descripción ──────────────────
                   Text(
                     b.name,
                     style: TextStyle(
@@ -182,7 +174,17 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
 
                   const SizedBox(height: 16),
 
-                  // ── Info check-in ──────────────────────────
+                  if (b.businessHours.isNotEmpty) ...[
+                    _buildInfoCard(
+                      icon: Icons.access_time_rounded,
+                      title: 'Horarios',
+                      value: b.hoursSummary,
+                      textPrimary: textPrimary,
+                      textSecondary: textSecondary,
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -248,7 +250,6 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
 
                   const SizedBox(height: 24),
 
-                  // ── Cupones disponibles ─────────────────────
                   Text(
                     'Cupones disponibles',
                     style: TextStyle(
@@ -259,16 +260,37 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
                   ),
                   const SizedBox(height: 12),
 
-                  if (!hasOffer)
-                    _emptyOffers(textSecondary, card)
-                  else
-                    _buildCouponCard(
-                      b,
-                      card,
-                      textPrimary,
-                      textSecondary,
-                      canRedeem,
-                    ),
+                  Builder(
+                    builder: (context) {
+                      final allOffers = [...b.offers];
+                      // Fallback para comercio legacy sin offers array
+                      if (allOffers.isEmpty && b.offer != null && b.offerCost > 0) {
+                        allOffers.add(BusinessOffer(
+                          id: 'legacy_${b.id}',
+                          title: b.offer!,
+                          peCost: b.offerCost,
+                          limitPeriod: 'none',
+                          isActive: b.isActive,
+                        ));
+                      }
+
+                      if (allOffers.isEmpty) {
+                        return _emptyOffers(textSecondary, card);
+                      }
+
+                      return Column(
+                        children: allOffers.map((offer) => Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: _buildOfferCard(
+                            offer: offer,
+                            card: card,
+                            textPrimary: textPrimary,
+                            textSecondary: textSecondary,
+                          ),
+                        )).toList(),
+                      );
+                    },
+                  ),
 
                   const SizedBox(height: 32),
                 ],
@@ -278,7 +300,6 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
         ],
       ),
 
-      // ── Barra inferior con saldo ────────────────────────
       bottomNavigationBar: Container(
         padding: EdgeInsets.fromLTRB(
           20,
@@ -332,13 +353,64 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
     );
   }
 
-  Widget _buildCouponCard(
-    Business b,
-    Color card,
-    Color textPrimary,
-    Color textSecondary,
-    bool canRedeem,
-  ) {
+  Widget _buildInfoCard({
+    required IconData icon,
+    required String title,
+    required String value,
+    required Color textPrimary,
+    required Color textSecondary,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final card = isDark ? AppColors.cardDark : AppColors.cardLight;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: card,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: AppColors.primary, size: 22),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: textSecondary,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: TextStyle(
+                    color: textPrimary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOfferCard({
+    required BusinessOffer offer,
+    required Color card,
+    required Color textPrimary,
+    required Color textSecondary,
+  }) {
+    final canRedeem = _peBalance >= offer.peCost && !offer.isSoldOut;
+    final isPurchasing = _purchasingOfferId == offer.id;
+
     return Container(
       decoration: BoxDecoration(
         color: card,
@@ -372,20 +444,34 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Text(
-                    b.offer!,
-                    style: TextStyle(
-                      color: textPrimary,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        offer.title,
+                        style: TextStyle(
+                          color: textPrimary,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      if (offer.description != null && offer.description!.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          offer.description!,
+                          style: TextStyle(
+                            color: textSecondary,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 14),
 
-            // Costo + botón canjear
             Row(
               children: [
                 Container(
@@ -410,7 +496,7 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        '${b.offerCost} PE',
+                        '${offer.peCost} PE',
                         style: const TextStyle(
                           color: Color(0xFFE8A020),
                           fontWeight: FontWeight.w700,
@@ -420,12 +506,39 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
                     ],
                   ),
                 ),
+                if (offer.hasStockLimit) ...[
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: offer.isSoldOut
+                          ? Colors.red.withAlpha(15)
+                          : Colors.blue.withAlpha(15),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      offer.isSoldOut
+                          ? 'Agotado'
+                          : 'Stock: ${offer.remainingStock}/${offer.totalStock}',
+                      style: TextStyle(
+                        color: offer.isSoldOut
+                            ? Colors.red.shade600
+                            : Colors.blue.shade600,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
                 const Spacer(),
                 SizedBox(
                   height: 40,
                   child: ElevatedButton(
-                    onPressed: (canRedeem && !_purchasing)
-                        ? _purchaseCoupon
+                    onPressed: (canRedeem && !isPurchasing)
+                        ? () => _purchaseOffer(offer)
                         : null,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: canRedeem
@@ -437,7 +550,7 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
                       ),
                       padding: const EdgeInsets.symmetric(horizontal: 18),
                     ),
-                    child: _purchasing
+                    child: isPurchasing
                         ? const SizedBox(
                             width: 16,
                             height: 16,
@@ -447,7 +560,11 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
                             ),
                           )
                         : Text(
-                            canRedeem ? 'Canjear' : 'PE insuficientes',
+                            offer.isSoldOut
+                                ? 'Sin stock'
+                                : canRedeem
+                                    ? 'Canjear'
+                                    : 'PE insuficientes',
                             style: const TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w700,

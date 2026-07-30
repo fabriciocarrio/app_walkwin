@@ -1,12 +1,13 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'notification_store.dart';
 
 /// Maneja notificaciones locales (sin Firebase — agregar google-services.json para FCM).
 class NotificationService {
   static final _plugin = FlutterLocalNotificationsPlugin();
   static const _channelId = 'walkwin_main';
   static const _channelName = 'WalkWin';
-  static const _persistentChannelId = 'walkwin_progress';
-  static const _persistentChannelName = 'Progreso de Pasos';
+  static const _persistentChannelId = 'walkwin_lockscreen';
+  static const _persistentChannelName = 'WalkWin';
   static const _persistentNotificationId = 1;
 
   static String _formatInt(int value) {
@@ -19,7 +20,7 @@ class NotificationService {
 
   static Future<void> init() async {
     const androidSettings = AndroidInitializationSettings(
-      '@mipmap/ic_launcher',
+      '@mipmap/launcher_icon',
     );
     const iosSettings = DarwinInitializationSettings(
       requestAlertPermission: true,
@@ -42,7 +43,7 @@ class NotificationService {
           ),
         );
 
-    // Canal para notificación persistente
+    // Canal para notificación persistente visible en lock screen
     await _plugin
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin
@@ -51,15 +52,17 @@ class NotificationService {
           const AndroidNotificationChannel(
             _persistentChannelId,
             _persistentChannelName,
-            importance: Importance.low,
+            importance: Importance.high,
           ),
         );
   }
 
-  /// Muestra una notificación local (ej: logro de racha).
+  /// Muestra una notificación local (ej: logro de racha)
+  /// y la guarda en el historial local de la app.
   static Future<void> showLocal({
     required String title,
     required String body,
+    String type = 'general',
   }) async {
     await _plugin.show(
       DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -75,10 +78,16 @@ class NotificationService {
         iOS: const DarwinNotificationDetails(),
       ),
     );
+
+    if (NotificationStore.instance.initialized) {
+      NotificationStore.instance.add(
+        NotificationItem(title: title, body: body, type: type),
+      );
+    }
   }
 
   /// Muestra/actualiza una notificación persistente con progreso de pasos
-  /// Esta notificación se ve en la barra de notificaciones y es permanente
+  /// Visible tanto en la barra de notificaciones como en la pantalla de bloqueo
   static Future<void> showProgressNotification({
     required int steps,
     required int coins,
@@ -90,21 +99,21 @@ class NotificationService {
     final clampedSteps = steps.clamp(0, safeGoal);
     final progressPct = ((clampedSteps / safeGoal) * 100).round();
 
-    final titleText = reachedGoal
-        ? 'Meta diaria completada'
-        : '${_formatInt(steps)} pasos hoy';
+    final titleText = '${_formatInt(steps)} pasos hoy';
 
     final statusText = reachedGoal
-        ? 'Meta alcanzada'
+        ? 'Meta alcanzada ✓'
         : 'Faltan ${_formatInt(stepsLeft.clamp(0, 999999))} pasos';
 
+    final coinsText = coins > 0 ? '${_formatInt(coins)} PE | ' : '';
+
     final bodyText = reachedGoal
-      ? '${_formatInt(coins)} PE acumulados | ${_formatInt(safeGoal)} / ${_formatInt(safeGoal)} pasos'
-      : '$progressPct% de tu meta | ${_formatInt(coins)} PE | ${_formatInt(clampedSteps)} / ${_formatInt(safeGoal)} pasos';
+      ? '✓ Meta alcanzada | $coinsText${_formatInt(safeGoal)} / ${_formatInt(safeGoal)} pasos'
+      : '$progressPct% de tu meta | $coinsText${_formatInt(clampedSteps)} / ${_formatInt(safeGoal)} pasos';
 
     final expandedText = reachedGoal
-      ? 'Completaste tu meta diaria de ${_formatInt(safeGoal)} pasos y llevas ${_formatInt(coins)} PE acumulados.'
-      : 'Llevas ${_formatInt(clampedSteps)} de ${_formatInt(safeGoal)} pasos. $statusText. PE acumulados: ${_formatInt(coins)}.';
+      ? '✓ Completaste tu meta diaria de ${_formatInt(safeGoal)} pasos.${coins > 0 ? ' ${_formatInt(coins)} PE acumulados.' : ''}'
+      : 'Llevas ${_formatInt(clampedSteps)} de ${_formatInt(safeGoal)} pasos. $statusText.${coins > 0 ? " PE acumulados: ${_formatInt(coins)}." : ""}';
 
     await _plugin.show(
       _persistentNotificationId,
@@ -114,14 +123,15 @@ class NotificationService {
         android: AndroidNotificationDetails(
           _persistentChannelId,
           _persistentChannelName,
-          importance: Importance.low,
-          priority: Priority.low,
+          importance: Importance.high,
+          priority: Priority.high,
           ongoing: true,
           autoCancel: false,
           onlyAlertOnce: true,
           showWhen: false,
+          visibility: NotificationVisibility.public,
           category: AndroidNotificationCategory.progress,
-          showProgress: !reachedGoal,
+          showProgress: true,
           maxProgress: safeGoal,
           progress: clampedSteps,
           subText: 'WalkWin',

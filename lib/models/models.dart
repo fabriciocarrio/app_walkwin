@@ -5,6 +5,7 @@ class User {
   final int peBalance;
   final int level;
   final int streakDays;
+  final String? myReferralCode;
 
   User({
     required this.id,
@@ -13,6 +14,7 @@ class User {
     required this.peBalance,
     required this.level,
     required this.streakDays,
+    this.myReferralCode,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -24,8 +26,106 @@ class User {
           json['pe_balance'] ?? json['coins_balance'] ?? json['coins'] ?? 0,
       level: json['level'] ?? 1,
       streakDays: json['streak_days'] ?? json['streak'] ?? 0,
+      myReferralCode: json['my_referral_code'],
     );
   }
+}
+
+class BusinessHour {
+  final int dayOfWeek;
+  final String? openTime;
+  final String? closeTime;
+  final bool isClosed;
+
+  BusinessHour({
+    required this.dayOfWeek,
+    this.openTime,
+    this.closeTime,
+    required this.isClosed,
+  });
+
+  factory BusinessHour.fromJson(Map<String, dynamic> json) {
+    return BusinessHour(
+      dayOfWeek: json['day_of_week'] ?? 0,
+      openTime: json['open_time']?.toString(),
+      closeTime: json['close_time']?.toString(),
+      isClosed: json['is_closed'] == true,
+    );
+  }
+
+  static const dayNames = [
+    'Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'
+  ];
+
+  String get dayName => dayNames[dayOfWeek % 7];
+
+  String get display {
+    if (isClosed) return '$dayName: Cerrado';
+    if (openTime != null && closeTime != null) {
+      final open = openTime!.length >= 5 ? openTime!.substring(0, 5) : openTime!;
+      final close = closeTime!.length >= 5 ? closeTime!.substring(0, 5) : closeTime!;
+      return '$dayName $open-$close';
+    }
+    return dayName;
+  }
+}
+
+class BusinessOffer {
+  final String id;
+  final String title;
+  final String? description;
+  final int peCost;
+  final String limitPeriod;
+  final int? limitCount;
+  final int? totalStock;
+  final int? remainingPeriod;
+  final int? remainingStock;
+  final int? usedStock;
+  final bool isActive;
+
+  BusinessOffer({
+    required this.id,
+    required this.title,
+    this.description,
+    required this.peCost,
+    required this.limitPeriod,
+    this.limitCount,
+    this.totalStock,
+    this.remainingPeriod,
+    this.remainingStock,
+    this.usedStock,
+    this.isActive = true,
+  });
+
+  factory BusinessOffer.fromJson(Map<String, dynamic> json) {
+    return BusinessOffer(
+      id: json['id']?.toString() ?? '',
+      title: json['title'] ?? '',
+      description: json['description'],
+      peCost: json['pe_cost'] ?? json['coin_cost'] ?? 0,
+      limitPeriod: json['limit_period'] ?? 'none',
+      limitCount: json['limit_count'] != null
+          ? (json['limit_count'] as num).toInt()
+          : null,
+      totalStock: json['total_stock'] != null
+          ? (json['total_stock'] as num).toInt()
+          : null,
+      remainingPeriod: json['remaining_period'] != null
+          ? (json['remaining_period'] as num).toInt()
+          : null,
+      remainingStock: json['remaining_stock'] != null
+          ? (json['remaining_stock'] as num).toInt()
+          : null,
+      usedStock: json['used_stock'] != null
+          ? (json['used_stock'] as num).toInt()
+          : null,
+      isActive: json['is_active'] ?? true,
+    );
+  }
+
+  bool get hasStockLimit => totalStock != null && totalStock! > 0;
+  int get displayRemaining => remainingStock ?? remainingPeriod ?? 0;
+  bool get isSoldOut => hasStockLimit && (remainingStock != null && remainingStock! <= 0);
 }
 
 class Business {
@@ -44,6 +144,8 @@ class Business {
   final double? longitude;
   final String? qrPayload;
   final bool checkedInToday;
+  final List<BusinessHour> businessHours;
+  final List<BusinessOffer> offers;
 
   Business({
     required this.id,
@@ -61,6 +163,8 @@ class Business {
     this.longitude,
     this.qrPayload,
     this.checkedInToday = false,
+    this.businessHours = const [],
+    this.offers = const [],
   });
 
   factory Business.fromJson(Map<String, dynamic> json) {
@@ -77,6 +181,20 @@ class Business {
               json['offer_cost'] ??
               json['offer_coin_cost'] ??
               0);
+
+    final hoursList = <BusinessHour>[];
+    if (json['business_hours'] is List) {
+      for (final h in json['business_hours']) {
+        hoursList.add(BusinessHour.fromJson(h));
+      }
+    }
+
+    final offersList = <BusinessOffer>[];
+    if (json['offers'] is List) {
+      for (final o in json['offers']) {
+        offersList.add(BusinessOffer.fromJson(o));
+      }
+    }
 
     return Business(
       id: json['id']?.toString() ?? '',
@@ -104,7 +222,71 @@ class Business {
           : null,
       qrPayload: json['qr_payload']?.toString(),
       checkedInToday: json['checked_in_today'] == true,
+      businessHours: hoursList,
+      offers: offersList,
     );
+  }
+
+  String get hoursSummary {
+    final byDay = <int, BusinessHour>{};
+    for (final h in businessHours) {
+      byDay[h.dayOfWeek] = h;
+    }
+    if (byDay.isEmpty) return '';
+
+    final sorted = byDay.entries.toList()..sort((a, b) => a.key.compareTo(b.key));
+
+    final ranges = <String>[];
+    int? rangeStart;
+    String? rangeOpen, rangeClose;
+
+    void flushRange(int end) {
+      if (rangeStart == null) return;
+      final startName = BusinessHour.dayNames[rangeStart!];
+      final endName = BusinessHour.dayNames[end];
+      final isClosed = byDay[rangeStart]?.isClosed ?? false;
+      if (isClosed) {
+        if (rangeStart == end) {
+          ranges.add('$startName: Cerrado');
+        } else {
+          ranges.add('$startName-$endName: Cerrado');
+        }
+      } else {
+        final open = (rangeOpen ?? '').length >= 5 ? rangeOpen!.substring(0, 5) : (rangeOpen ?? '');
+        final close = (rangeClose ?? '').length >= 5 ? rangeClose!.substring(0, 5) : (rangeClose ?? '');
+        if (rangeStart == end) {
+          ranges.add('$startName $open-$close');
+        } else {
+          ranges.add('$startName-$endName $open-$close');
+        }
+      }
+      rangeStart = null;
+      rangeOpen = null;
+      rangeClose = null;
+    }
+
+    for (final entry in sorted) {
+      final h = entry.value;
+      if (rangeStart == null) {
+        rangeStart = h.dayOfWeek;
+        rangeOpen = h.isClosed ? null : (h.openTime ?? '');
+        rangeClose = h.isClosed ? null : (h.closeTime ?? '');
+      } else if ((h.isClosed && byDay[rangeStart]?.isClosed == true) ||
+          (!h.isClosed && !byDay[rangeStart]!.isClosed &&
+              h.openTime == rangeOpen && h.closeTime == rangeClose)) {
+        continue;
+      } else {
+        flushRange(sorted[sorted.indexOf(entry) - 1].key);
+        rangeStart = h.dayOfWeek;
+        rangeOpen = h.isClosed ? null : (h.openTime ?? '');
+        rangeClose = h.isClosed ? null : (h.closeTime ?? '');
+      }
+    }
+    if (rangeStart != null) {
+      flushRange(sorted.last.key);
+    }
+
+    return ranges.join(' · ');
   }
 }
 
@@ -352,6 +534,7 @@ class CollectibleSpawnDto {
   final String collectibleName;
   final String? collectibleImageUrl;
   final String collectibleRarity;
+  final String? description;
   final String? collectibleCategory;
   final String? collectibleSet;
   final double lat;
@@ -363,6 +546,7 @@ class CollectibleSpawnDto {
   final String? department;
   final bool claimed;
   final int quantity;
+  final int rarityTier;
 
   CollectibleSpawnDto({
     required this.id,
@@ -371,6 +555,7 @@ class CollectibleSpawnDto {
     this.collectibleImageUrl,
     required this.collectibleRarity,
     this.collectibleCategory,
+    this.description,
     required this.collectibleSet,
     required this.lat,
     required this.lng,
@@ -381,6 +566,7 @@ class CollectibleSpawnDto {
     this.department,
     this.claimed = false,
     this.quantity = 1,
+    this.rarityTier = 0,
   });
 
   factory CollectibleSpawnDto.fromJson(Map<String, dynamic> json) {
@@ -410,6 +596,8 @@ class CollectibleSpawnDto {
           json['collectible_rarity']?.toString() ??
           collectible['rarity']?.toString() ??
           'common',
+      description:
+          json['description']?.toString(),
       collectibleCategory:
           json['collectible_category']?.toString() ??
           collectible['category']?.toString(),
@@ -442,6 +630,7 @@ class CollectibleSpawnDto {
           collectible['department']?.toString(),
       claimed: json['claimed'] == true,
       quantity: (json['quantity'] as num?)?.toInt() ?? 1,
+      rarityTier: (json['rarity_tier'] as num?)?.toInt() ?? 0,
     );
   }
 }
@@ -500,6 +689,7 @@ class CollectibleSet {
 
 class Achievement {
   final String id;
+  final String slug;
   final String name;
   final String? description;
   final String category;
@@ -513,6 +703,7 @@ class Achievement {
 
   Achievement({
     required this.id,
+    required this.slug,
     required this.name,
     this.description,
     required this.category,
@@ -530,6 +721,7 @@ class Achievement {
   factory Achievement.fromJson(Map<String, dynamic> json) {
     return Achievement(
       id: json['id']?.toString() ?? '',
+      slug: json['slug']?.toString() ?? json['id']?.toString() ?? '',
       name: json['name'] ?? '',
       description: json['description'],
       category: json['category'] ?? 'general',
@@ -548,31 +740,239 @@ class Achievement {
   }
 }
 
+class ClanInfo {
+  final int id;
+  final String name;
+  final String? description;
+  final String? logo;
+  final String department;
+  final String? leaderName;
+  final int memberCount;
+  final int totalInfluence;
+  final int seasonInfluence;
+
+  ClanInfo({
+    required this.id,
+    required this.name,
+    this.description,
+    this.logo,
+    required this.department,
+    this.leaderName,
+    required this.memberCount,
+    required this.totalInfluence,
+    required this.seasonInfluence,
+  });
+
+  factory ClanInfo.fromJson(Map<String, dynamic> json) {
+    return ClanInfo(
+      id: (json['id'] as num?)?.toInt() ?? 0,
+      name: json['name'] ?? '',
+      description: json['description'],
+      logo: json['logo'],
+      department: json['department'] ?? '',
+      leaderName: json['leader_name'],
+      memberCount: (json['member_count'] as num?)?.toInt() ?? 1,
+      totalInfluence: (json['total_influence'] as num?)?.toInt() ?? 0,
+      seasonInfluence: (json['season_influence'] as num?)?.toInt() ?? 0,
+    );
+  }
+}
+
+class ClanMemberInfo {
+  final int userId;
+  final String name;
+  final String role;
+  final int influence;
+  final int seasonInfluence;
+  final int rank;
+  final String? joinedAt;
+
+  ClanMemberInfo({
+    required this.userId,
+    required this.name,
+    required this.role,
+    required this.influence,
+    required this.seasonInfluence,
+    required this.rank,
+    this.joinedAt,
+  });
+
+  factory ClanMemberInfo.fromJson(Map<String, dynamic> json) {
+    return ClanMemberInfo(
+      userId: (json['user_id'] as num?)?.toInt() ?? 0,
+      name: json['name'] ?? '',
+      role: json['role'] ?? 'member',
+      influence: (json['influence'] as num?)?.toInt() ?? 0,
+      seasonInfluence: (json['season_influence'] as num?)?.toInt() ?? 0,
+      rank: (json['rank'] as num?)?.toInt() ?? 0,
+      joinedAt: json['joined_at'],
+    );
+  }
+}
+
+class UserClanData {
+  final int clanId;
+  final String clanName;
+  final String? clanLogo;
+  final String clanDepartment;
+  final String role;
+  final int personalInfluence;
+  final int personalSeasonInfluence;
+  final int memberRank;
+  final int totalMembers;
+  final int clanTotalInfluence;
+  final int clanSeasonInfluence;
+
+  UserClanData({
+    required this.clanId,
+    required this.clanName,
+    this.clanLogo,
+    required this.clanDepartment,
+    required this.role,
+    required this.personalInfluence,
+    required this.personalSeasonInfluence,
+    required this.memberRank,
+    required this.totalMembers,
+    required this.clanTotalInfluence,
+    required this.clanSeasonInfluence,
+  });
+
+  factory UserClanData.fromJson(Map<String, dynamic> json) {
+    return UserClanData(
+      clanId: (json['clan_id'] as num?)?.toInt() ?? 0,
+      clanName: json['clan_name'] ?? '',
+      clanLogo: json['clan_logo'],
+      clanDepartment: json['clan_department'] ?? '',
+      role: json['role'] ?? 'member',
+      personalInfluence: (json['personal_influence'] as num?)?.toInt() ?? 0,
+      personalSeasonInfluence: (json['personal_season_influence'] as num?)?.toInt() ?? 0,
+      memberRank: (json['member_rank'] as num?)?.toInt() ?? 0,
+      totalMembers: (json['total_members'] as num?)?.toInt() ?? 0,
+      clanTotalInfluence: (json['clan_total_influence'] as num?)?.toInt() ?? 0,
+      clanSeasonInfluence: (json['clan_season_influence'] as num?)?.toInt() ?? 0,
+    );
+  }
+}
+
+class ClanRankingEntry {
+  final int rank;
+  final int id;
+  final String name;
+  final String? logo;
+  final String department;
+  final int seasonInfluence;
+  final int totalInfluence;
+  final int memberCount;
+
+  ClanRankingEntry({
+    required this.rank,
+    required this.id,
+    required this.name,
+    this.logo,
+    required this.department,
+    required this.seasonInfluence,
+    required this.totalInfluence,
+    required this.memberCount,
+  });
+
+  factory ClanRankingEntry.fromJson(Map<String, dynamic> json) {
+    return ClanRankingEntry(
+      rank: (json['rank'] as num?)?.toInt() ?? 0,
+      id: (json['id'] as num?)?.toInt() ?? 0,
+      name: json['name'] ?? '',
+      logo: json['logo'],
+      department: json['department'] ?? '',
+      seasonInfluence: (json['season_influence'] as num?)?.toInt() ?? 0,
+      totalInfluence: (json['total_influence'] as num?)?.toInt() ?? 0,
+      memberCount: (json['member_count'] as num?)?.toInt() ?? 0,
+    );
+  }
+}
+
+class ClanDetail {
+  final int id;
+  final String name;
+  final String? description;
+  final String? logo;
+  final String department;
+  final int leaderId;
+  final String invitationCode;
+  final int memberCount;
+  final int totalInfluence;
+  final int seasonInfluence;
+  final int? departmentPosition;
+  final int daysLeftInSeason;
+  final List<ClanMemberInfo> members;
+
+  ClanDetail({
+    required this.id,
+    required this.name,
+    this.description,
+    this.logo,
+    required this.department,
+    required this.leaderId,
+    required this.invitationCode,
+    required this.memberCount,
+    required this.totalInfluence,
+    required this.seasonInfluence,
+    this.departmentPosition,
+    required this.daysLeftInSeason,
+    required this.members,
+  });
+
+  factory ClanDetail.fromJson(Map<String, dynamic> json) {
+    final membersList = (json['members'] as List<dynamic>?)
+            ?.map((m) => ClanMemberInfo.fromJson(m as Map<String, dynamic>))
+            .toList() ??
+        [];
+
+    return ClanDetail(
+      id: (json['id'] as num?)?.toInt() ?? 0,
+      name: json['name'] ?? '',
+      description: json['description'],
+      logo: json['logo'],
+      department: json['department'] ?? '',
+      leaderId: (json['leader_id'] as num?)?.toInt() ?? 0,
+      invitationCode: json['invitation_code'] ?? '',
+      memberCount: (json['member_count'] as num?)?.toInt() ?? 0,
+      totalInfluence: (json['total_influence'] as num?)?.toInt() ?? 0,
+      seasonInfluence: (json['season_influence'] as num?)?.toInt() ?? 0,
+      departmentPosition: (json['department_position'] as num?)?.toInt(),
+      daysLeftInSeason: (json['days_left_in_season'] as num?)?.toInt() ?? 0,
+      members: membersList,
+    );
+  }
+}
+
 class GeoMissionDto {
   final String id;
   final String title;
   final String? description;
-  final int targetSteps;
-  final int nearbyBusinessesRequired;
-  final int proximityRadiusMeters;
+  final String missionType;
+  final int targetCount;
+  final int currentProgress;
+  final int progressPercent;
   final int rewardCoins;
   final int rewardXp;
-  final int progressSteps;
-  final int progressBusinesses;
   final bool isCompleted;
+  final bool isClaimed;
+  final Map<String, dynamic>? criteria;
+  final String? criteriaDescription;
 
   GeoMissionDto({
     required this.id,
     required this.title,
     required this.description,
-    required this.targetSteps,
-    required this.nearbyBusinessesRequired,
-    required this.proximityRadiusMeters,
+    required this.missionType,
+    required this.targetCount,
+    required this.currentProgress,
+    required this.progressPercent,
     required this.rewardCoins,
     required this.rewardXp,
-    required this.progressSteps,
-    required this.progressBusinesses,
     required this.isCompleted,
+    required this.isClaimed,
+    this.criteria,
+    this.criteriaDescription,
   });
 
   factory GeoMissionDto.fromJson(Map<String, dynamic> json) {
@@ -580,16 +980,18 @@ class GeoMissionDto {
       id: json['id']?.toString() ?? '',
       title: json['title'] ?? 'Misión',
       description: json['description'],
-      targetSteps: (json['target_steps'] as num?)?.toInt() ?? 0,
-      nearbyBusinessesRequired:
-          (json['nearby_businesses_required'] as num?)?.toInt() ?? 0,
-      proximityRadiusMeters:
-          (json['proximity_radius_meters'] as num?)?.toInt() ?? 0,
+      missionType: json['mission_type']?.toString() ?? 'steps',
+      targetCount: (json['target_count'] as num?)?.toInt() ?? 0,
+      currentProgress: (json['current_progress'] as num?)?.toInt() ?? 0,
+      progressPercent: (json['progress_percent'] as num?)?.toInt() ?? 0,
       rewardCoins: (json['reward_coins'] as num?)?.toInt() ?? 0,
       rewardXp: (json['reward_xp'] as num?)?.toInt() ?? 0,
-      progressSteps: (json['progress_steps'] as num?)?.toInt() ?? 0,
-      progressBusinesses: (json['progress_businesses'] as num?)?.toInt() ?? 0,
-      isCompleted: json['is_completed'] == true,
+      isCompleted: json['is_completed'] == true || json['completed_at'] != null,
+      isClaimed: json['is_claimed'] == true || json['claimed_at'] != null,
+      criteria: json['criteria'] is Map<String, dynamic>
+          ? json['criteria'] as Map<String, dynamic>
+          : null,
+      criteriaDescription: json['criteria_description']?.toString(),
     );
   }
 }

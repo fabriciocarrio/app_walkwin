@@ -2,16 +2,26 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:pedometer/pedometer.dart';
+import 'package:shimmer/shimmer.dart';
 import '../models/models.dart';
 import '../services/api_service.dart';
 import '../services/offline_sync_service.dart';
 import '../services/health_service.dart';
 import '../services/notification_service.dart';
+import '../services/notification_store.dart';
 import '../services/celebration_service.dart';
+import '../services/step_counting_service.dart';
 import '../theme/app_theme.dart';
 import 'level_progress_screen.dart';
+import 'earn_pe_screen.dart';
 import 'missions_screen.dart';
+import 'notifications_screen.dart';
+import 'profile_screen.dart';
+import 'weekly_activity_screen.dart';
+import 'clan_list_screen.dart';
+import 'clan_detail_screen.dart';
+import 'clan_rankings_screen.dart';
+import '../config/app_config.dart';
 
 class DashboardScreen extends StatefulWidget {
   final VoidCallback? onNavigateToPremios;
@@ -30,7 +40,7 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   int _steps = 0;
   int _peBalance = 1240;
   int _level = 5;
@@ -47,41 +57,44 @@ class _DashboardScreenState extends State<DashboardScreen>
   String? _apiLevelTitle;
   int _dailyGoal = 10000;
   bool _loading = false;
-  // pepitas removed after rebrand; keep loading flags minimal
   List<Business> _featured = [];
   bool _featuredLoading = true;
   WeeklyActivitySummary? _weekly;
   bool _weeklyLoading = true;
   List<GeoMissionDto> _missions = [];
   bool _missionsLoading = true;
+  UserClanData? _clanData;
+  bool _clanLoading = true;
 
-  // Pedómetro en tiempo real
-  StreamSubscription<StepCount>? _stepSub;
-  StreamSubscription<PedestrianStatus>? _statusSub;
-  int? _initialSteps; // pasos al arrancar el sensor
-  int _sessionSteps = 0; // delta desde que se abrió la app
+  int get _sessionSteps =>
+      StepCountingService.instance.sessionStepsNotifier.value;
 
   // Sincronización al backend
   Timer? _syncTimer;
   Timer? _realtimeSyncDebounce;
   Timer? _midnightResetTimer;
   int _lastSyncedSteps = 0;
+  bool _syncing = false;
   String _stepSource = 'native_sensor';
   String _activeDayKey = '';
   static const _storage = FlutterSecureStorage();
 
+  DateTime? _lastNotificationUpdate;
+  static const int _notificationThrottleMs = 500;
+
   // Meta diaria y celebración
   bool _dailyGoalReached = false;
   late AnimationController _celebrationController;
-  late Animation<double> _celebrationScale;
   late AnimationController _walkerController;
-  late Animation<Offset> _walkerOffset;
-  late Animation<double> _walkerTilt;
   Timer? _walkerStopTimer;
+  int _notificationUnread = 0;
+  String _userName = '';
+  String? _avatarUrl;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _activeDayKey = _argentinaDateKey();
     _setupCelebrationAnimation();
     _setupWalkerAnimation();
@@ -89,16 +102,33 @@ class _DashboardScreenState extends State<DashboardScreen>
     _loadStepSource();
     _loadStats();
     _loadWeeklyActivity();
-    _initPedometer();
     _loadFeatured();
     _loadMissions();
-    // Mostrar notificación persistente de progreso
+    _loadClanData();
+    _loadUserProfile();
+
+    StepCountingService.instance.onStepCounted = _onStepCounted;
+    StepCountingService.instance.onMidnightReset = _onServiceMidnightReset;
+    StepCountingService.instance.sessionStepsNotifier.addListener(
+      _onSessionStepsChanged,
+    );
+
+    NotificationStore.instance.addListener(_onNotificationsChanged);
+    _notificationUnread = NotificationStore.instance.unreadCount;
+
     _showProgressNotification();
-    // Sincronización ultra-frecuente para sensación de tiempo real
     _syncTimer = Timer.periodic(
       const Duration(seconds: 10),
       (_) => _syncSteps(),
     );
+  }
+
+  void _onNotificationsChanged() {
+    if (mounted) {
+      setState(() {
+        _notificationUnread = NotificationStore.instance.unreadCount;
+      });
+    }
   }
 
   void _setupCelebrationAnimation() {
@@ -106,22 +136,12 @@ class _DashboardScreenState extends State<DashboardScreen>
       duration: const Duration(milliseconds: 800),
       vsync: this,
     );
-    _celebrationScale = Tween<double>(begin: 1.0, end: 1.2).animate(
-      CurvedAnimation(parent: _celebrationController, curve: Curves.elasticOut),
-    );
   }
 
   void _setupWalkerAnimation() {
     _walkerController = AnimationController(
       duration: const Duration(milliseconds: 220),
       vsync: this,
-    );
-    _walkerOffset =
-        Tween<Offset>(begin: Offset.zero, end: const Offset(0.08, 0)).animate(
-          CurvedAnimation(parent: _walkerController, curve: Curves.easeInOut),
-        );
-    _walkerTilt = Tween<double>(begin: -0.06, end: 0.08).animate(
-      CurvedAnimation(parent: _walkerController, curve: Curves.easeInOut),
     );
   }
 
@@ -142,6 +162,24 @@ class _DashboardScreenState extends State<DashboardScreen>
     _realtimeSyncDebounce = Timer(const Duration(seconds: 3), _syncSteps);
   }
 
+  /// Persiste el total de pasos de hoy en SQLite local de forma inmediata.
+  ///
+  /// Esta llamada es independiente del estado de la red: funciona offline y
+  /// no depende de que _loading sea false. Es la primera línea de defensa
+  /// para no perder pasos si la app se cierra antes del próximo _syncTimer.
+  Future<void> _saveStepsLocally() async {
+    if (_totalSteps <= 0) return;
+    try {
+      await OfflineSyncService.saveSteps(
+        date: _todayDate(),
+        steps: _totalSteps,
+        source: _stepSource,
+      );
+    } catch (_) {
+      // SQLite no debería fallar, pero si ocurre no bloqueamos el flujo.
+    }
+  }
+
   Future<void> _loadStepSource() async {
     final saved = await _storage.read(key: 'step_source');
     if (saved != null && mounted) {
@@ -149,63 +187,177 @@ class _DashboardScreenState extends State<DashboardScreen>
     }
   }
 
-  void _initPedometer() {
-    _stepSub = Pedometer.stepCountStream.listen(
-      (StepCount event) {
-        final dayKey = _argentinaDateKey();
-        if (dayKey != _activeDayKey) {
-          _activeDayKey = dayKey;
-          _initialSteps = event.steps;
-          if (mounted) {
-            setState(() {
-              _steps = 0;
-              _sessionSteps = 0;
-              _lastSyncedSteps = 0;
-              _xpToday = 0;
-              _dailyGoalReached = false;
-            });
-          }
-          _showProgressNotification();
-          return;
-        }
+  void _onStepCounted() {
+    if (!mounted) return;
+    _triggerWalkerAnimation();
+    // Persistir en SQLite inmediatamente para no perder pasos si la app crashea
+    // antes del próximo _syncTimer. Esta escritura es offline-safe.
+    _saveStepsLocally();
+    _scheduleRealtimeSync();
+    _showProgressNotification();
+    if (_sessionSteps - _lastSyncedSteps >= 5) {
+      _syncSteps();
+    }
+  }
 
-        _initialSteps ??= event.steps;
-        final delta = event.steps - _initialSteps!;
-        final newSteps = delta < 0 ? 0 : delta;
-        final previousSessionSteps = _sessionSteps;
+  void _onSessionStepsChanged() {
+    if (!mounted) return;
+    final currentDayKey = _argentinaDateKey();
+    if (currentDayKey != _activeDayKey) {
+      _activeDayKey = currentDayKey;
+      _steps = 0;
+      _lastSyncedSteps = 0;
+      _xpToday = 0;
+      _dailyGoalReached = false;
+      _showProgressNotification();
+      _loadStats();
+    }
+    final totalSteps = _steps + _sessionSteps;
+    if (totalSteps >= _dailyGoal && !_dailyGoalReached) {
+      _showDailyGoalAchievement();
+      _showTierExplanationOnce();
+    }
+    setState(() {});
+  }
 
-        if (mounted) {
-          setState(() {
-            _sessionSteps = newSteps;
-          });
-          if (newSteps > previousSessionSteps) {
-            _triggerWalkerAnimation();
-            _scheduleRealtimeSync();
-          }
-          // Actualizar notificación persistente
-          _showProgressNotification();
-        }
+  Future<void> _showTierExplanationOnce() async {
+    const key = 'tier_explanation_shown';
+    final shown = await _storage.read(key: key);
+    if (shown == 'true' || !mounted) return;
+    await _storage.write(key: key, value: 'true');
+    if (!mounted) return;
 
-        // Detectar cuando se alcanza la meta diaria (10,000 pasos)
-        final totalSteps = _steps + newSteps;
-        if (totalSteps >= _dailyGoal && !_dailyGoalReached) {
-          _showDailyGoalAchievement();
-        }
-
-        // Sincronizar por bloques muy cortos para máxima reactividad
-        if (newSteps - _lastSyncedSteps >= 5) {
-          _syncSteps();
-        }
-      },
-      onError: (_) {},
-      cancelOnError: false,
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.emoji_events, color: Color(0xFFF5C535), size: 28),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                '¡Meta cumplida!',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Seguí sumando pasos para ganar más Puntos Exploria:',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 16),
+            _tierRow(
+              '1ᵉʳ tramo',
+              '0 a 10.000',
+              '100 pasos = 1 PE',
+              const Color(0xFF20D4A4),
+            ),
+            const SizedBox(height: 10),
+            _tierRow(
+              '2ᵈᵒ tramo',
+              '10.001 a 20.000',
+              '200 pasos = 1 PE',
+              const Color(0xFFFF6B00),
+            ),
+            const SizedBox(height: 10),
+            _tierRow(
+              '3ᵉʳ tramo',
+              '20.001 a 30.000',
+              '400 pasos = 1 PE',
+              const Color(0xFF9C27B0),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'A partir de 30.000 pasos no se generan más PE en el día.',
+              style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text(
+              'Entendido',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
     );
+  }
 
-    _statusSub = Pedometer.pedestrianStatusStream.listen(
-      (PedestrianStatus _) {},
-      onError: (_) {},
-      cancelOnError: false,
+  Widget _tierRow(String label, String range, String rate, Color color) {
+    return Row(
+      children: [
+        Container(
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(3),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+            ),
+            Text('$range • $rate', style: const TextStyle(fontSize: 12)),
+          ],
+        ),
+      ],
     );
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _checkDayChange();
+    }
+  }
+
+  void _checkDayChange() {
+    final currentDayKey = _argentinaDateKey();
+    if (currentDayKey != _activeDayKey) {
+      _activeDayKey = currentDayKey;
+      StepCountingService.instance.resetSession();
+      if (mounted) {
+        setState(() {
+          _steps = 0;
+          _lastSyncedSteps = 0;
+          _xpToday = 0;
+          _dailyGoalReached = false;
+        });
+      }
+      _showProgressNotification();
+      _loadStats();
+      _scheduleMidnightReset();
+    }
+  }
+
+  void _onServiceMidnightReset() {
+    _activeDayKey = _argentinaDateKey();
+    if (mounted) {
+      setState(() {
+        _steps = 0;
+        _lastSyncedSteps = 0;
+        _xpToday = 0;
+        _dailyGoalReached = false;
+      });
+    }
+    _showProgressNotification();
+    _loadStats();
+    _scheduleMidnightReset();
   }
 
   Future<void> _loadFeatured() async {
@@ -243,6 +395,46 @@ class _DashboardScreenState extends State<DashboardScreen>
     }
   }
 
+  Future<void> _loadClanData() async {
+    try {
+      final data = await ApiService.getMyClan();
+      if (mounted) {
+        if (data['clan'] != null) {
+          setState(() {
+            _clanData = UserClanData.fromJson(data['clan']);
+            _clanLoading = false;
+          });
+        } else {
+          setState(() => _clanLoading = false);
+        }
+      }
+    } catch (_) {
+      if (mounted) setState(() => _clanLoading = false);
+    }
+  }
+
+  Future<void> _loadUserProfile() async {
+    try {
+      final data = await ApiService.getUserProfile();
+      if (mounted) {
+        final name = data['name']?.toString() ?? '';
+        final avatarId = data['avatar']?.toString();
+        String? avatarUrl;
+        if (avatarId != null && avatarId.isNotEmpty) {
+          final base = AppConfig.apiBaseUrl.replaceAll(
+            RegExp(r'/api/v1/?$'),
+            '',
+          );
+          avatarUrl = '$base/img-profile/$avatarId';
+        }
+        setState(() {
+          _userName = name;
+          _avatarUrl = avatarUrl;
+        });
+      }
+    } catch (_) {}
+  }
+
   Future<void> _loadWeeklyActivity() async {
     try {
       final data = await ApiService.getWeeklyActivity();
@@ -260,6 +452,13 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   Future<void> _showProgressNotification() async {
+    final now = DateTime.now();
+    if (_lastNotificationUpdate != null &&
+        now.difference(_lastNotificationUpdate!).inMilliseconds <
+            _notificationThrottleMs) {
+      return;
+    }
+    _lastNotificationUpdate = now;
     await NotificationService.showProgressNotification(
       steps: _totalSteps,
       coins: _livePe,
@@ -282,13 +481,24 @@ class _DashboardScreenState extends State<DashboardScreen>
     NotificationService.showLocal(
       title: '🎉 ¡Meta Diaria Alcanzada!',
       body: 'Felicidades, ¡lograste $_dailyGoal pasos! Ganaste bonus.',
+      type: 'goal',
     );
   }
 
-  // Total = pasos de la API (histórico) + pasos en esta sesión
   int get _totalSteps => _steps + _sessionSteps;
-  int get _pendingSteps => math.max(0, _sessionSteps - _lastSyncedSteps);
-  int get _livePe => _peBalance + (_pendingSteps ~/ 100);
+
+  static int _tieredPE(int steps) {
+    final t1 = steps.clamp(0, 10000) ~/ 100;
+    final t2 = (steps - 10000).clamp(0, 10000) ~/ 200;
+    final t3 = (steps - 20000).clamp(0, 10000) ~/ 400;
+    return t1 + t2 + t3;
+  }
+
+  int get _livePe {
+    final confirmedStepPE = _tieredPE(_steps);
+    final totalStepPE = _tieredPE(_totalSteps);
+    return _peBalance + (totalStepPE - confirmedStepPE);
+  }
 
   DateTime _argentinaNow() {
     // Argentina UTC-3 (sin DST actual)
@@ -315,11 +525,10 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   void _handleMidnightReset() {
     _activeDayKey = _argentinaDateKey();
-    _initialSteps = null;
+    StepCountingService.instance.resetSession();
     if (mounted) {
       setState(() {
         _steps = 0;
-        _sessionSteps = 0;
         _lastSyncedSteps = 0;
         _xpToday = 0;
         _dailyGoalReached = false;
@@ -336,32 +545,70 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   Future<void> _syncSteps() async {
-    final pendingSteps = _sessionSteps - _lastSyncedSteps;
-    if (pendingSteps <= 0) return;
-    final date = _todayDate();
+    if (_syncing) return; // Solo bloquear si ya hay un sync en curso
+    _syncing = true;
+    try {
+      await _syncStepsInternal();
+    } finally {
+      _syncing = false;
+    }
+  }
 
-    // If using a health platform, prefer its total for accuracy
-    int stepsToSync = _totalSteps;
-    String source = _stepSource;
+  Future<void> _syncStepsInternal() async {
+    final date = _todayDate();
+    final stepsAtStart = _sessionSteps;
+
     if (_stepSource == 'google_fit' || _stepSource == 'healthkit') {
       final healthSteps = await HealthService.getTodaySteps();
       if (healthSteps != null && healthSteps > 0) {
-        stepsToSync = healthSteps;
-        if (mounted) setState(() => _sessionSteps = healthSteps - _steps);
+        StepCountingService.instance.resetSession();
+        if (mounted) setState(() => _lastSyncedSteps = 0);
+        await OfflineSyncService.saveSteps(
+          date: date,
+          steps: healthSteps,
+          source: _stepSource,
+        );
+        final response = await OfflineSyncService.flushPending();
+        if (mounted) {
+          setState(() {
+            if (response != null) {
+              _peBalance = (response['new_balance'] as int?) ?? _peBalance;
+              _xpTotal = (response['xp_total'] as int?) ?? _xpTotal;
+              _level = (response['level'] as int?) ?? _level;
+              _streak = (response['streak'] as int?) ?? _streak;
+              _dailyGoal = (response['daily_steps_goal'] as int?) ?? _dailyGoal;
+            }
+          });
+        }
       }
+      return;
     }
 
-    // Save locally first
+    final pendingSteps = _sessionSteps - _lastSyncedSteps;
+    if (pendingSteps <= 0) return;
+
     await OfflineSyncService.saveSteps(
       date: date,
-      steps: stepsToSync,
-      source: source,
+      steps: _totalSteps,
+      source: _stepSource,
     );
-    // Then try to flush to backend
-    await OfflineSyncService.flushPending();
-    _lastSyncedSteps = _sessionSteps;
+    final response = await OfflineSyncService.flushPending();
+    // Solo actualizar lastSyncedSteps si _sessionSteps no cambió durante la sync
+    if (_sessionSteps == stepsAtStart) {
+      _lastSyncedSteps = _sessionSteps;
+    } else {
+      _lastSyncedSteps = stepsAtStart;
+    }
     if (mounted) {
-      setState(() {});
+      setState(() {
+        if (response != null) {
+          _peBalance = (response['new_balance'] as int?) ?? _peBalance;
+          _xpTotal = (response['xp_total'] as int?) ?? _xpTotal;
+          _level = (response['level'] as int?) ?? _level;
+          _streak = (response['streak'] as int?) ?? _streak;
+          _dailyGoal = (response['daily_steps_goal'] as int?) ?? _dailyGoal;
+        }
+      });
     }
   }
 
@@ -371,11 +618,15 @@ class _DashboardScreenState extends State<DashboardScreen>
     _realtimeSyncDebounce?.cancel();
     _midnightResetTimer?.cancel();
     _walkerStopTimer?.cancel();
-    _stepSub?.cancel();
-    _statusSub?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    StepCountingService.instance.onStepCounted = null;
+    StepCountingService.instance.onMidnightReset = null;
+    StepCountingService.instance.sessionStepsNotifier.removeListener(
+      _onSessionStepsChanged,
+    );
     _celebrationController.dispose();
     _walkerController.dispose();
-    // Remover notificación persistente al salir
+    NotificationStore.instance.removeListener(_onNotificationsChanged);
     NotificationService.cancelProgressNotification();
     super.dispose();
   }
@@ -383,13 +634,28 @@ class _DashboardScreenState extends State<DashboardScreen>
   int _prevStreak = 0;
 
   Future<void> _loadStats() async {
+    if (mounted) setState(() => _loading = true);
     try {
       final stats = await ApiService.getStats();
       if (mounted) {
-        final previousBaseSteps = _steps;
-        final nextBaseSteps =
-            stats['today_steps'] ?? stats['total_steps'] ?? _steps;
+        final nextBaseSteps = (stats['today_steps'] as int?) ?? _steps;
         final newStreak = stats['streak'] ?? _streak;
+        // Reconciliación ABSOLUTA: sessionSteps = lo que el sensor tiene localmente
+        // MENOS lo que el backend ya tiene confirmado.
+        //
+        // Invariante: sessionSteps = max(0, totalLocalHoy - backendConfirmadoHoy)
+        //
+        // Esto evita la duplicación en pull-to-refresh y en reinstalación:
+        //   - Si backend tiene 5000 y local tiene 5000 → sessionSteps = 0 ✓
+        //   - Si el usuario caminó 10 pasos durante la sync → sessionSteps = 10 ✓
+        //   - Si hay datos residuales en storage tras reinstalación → sessionSteps = 0 ✓
+        final totalLocalSteps = _steps + _sessionSteps;
+        final stepsStillPending = math.max(0, totalLocalSteps - nextBaseSteps);
+        if (_sessionSteps != stepsStillPending) {
+          await StepCountingService.instance.setConfirmedSession(stepsStillPending);
+          // Los pasos pendientes aún no han sido re-enviados en este ciclo
+          _lastSyncedSteps = 0;
+        }
         setState(() {
           _steps = nextBaseSteps;
           _peBalance = stats['pe_balance'] ?? stats['coins'] ?? _peBalance;
@@ -402,30 +668,29 @@ class _DashboardScreenState extends State<DashboardScreen>
           _xpNextLevelTarget =
               stats['xp_next_level_target'] ?? _xpNextLevelTarget;
           _nextLevel = stats['next_level'] ?? _nextLevel;
-            _maxLevel = stats['max_level'] ?? _maxLevel;
-            _isMaxLevel = stats['is_max_level'] ?? (_level >= _maxLevel);
-            _apiLevelTitle = stats['level_title'] ?? _apiLevelTitle;
+          _maxLevel = stats['max_level'] ?? _maxLevel;
+          _isMaxLevel = stats['is_max_level'] ?? (_level >= _maxLevel);
+          _apiLevelTitle = stats['level_title'] ?? _apiLevelTitle;
           _levelBaseXp = stats['level_base_xp'] ?? _levelBaseXp;
           _levelGrowthXp = stats['level_growth_xp'] ?? _levelGrowthXp;
           _dailyGoal = stats['daily_steps_goal'] ?? _dailyGoal;
-          // pepitas removed after rebrand
           _loading = false;
         });
-        if (nextBaseSteps > previousBaseSteps) {
-          _triggerWalkerAnimation();
-        }
         // Notify on streak milestones
         const milestones = [3, 7, 14, 30];
         if (newStreak > _prevStreak && milestones.contains(newStreak)) {
           NotificationService.showLocal(
             title: '🔥 ¡Racha de $newStreak días!',
             body: 'Seguís caminando — ¡mantené el ritmo!',
+            type: 'streak',
           );
         }
         _prevStreak = newStreak;
       }
+      _showProgressNotification();
     } catch (e) {
       if (mounted) setState(() => _loading = false);
+      _showProgressNotification();
     }
   }
 
@@ -458,12 +723,51 @@ class _DashboardScreenState extends State<DashboardScreen>
       backgroundColor: bg,
       body: SafeArea(
         child: _loading
-            ? Center(child: CircularProgressIndicator(color: cs.primary))
+            ? SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 12),
+                    _buildHeader(isDark, textPrimary, textSecondary),
+                    const SizedBox(height: 24),
+                    _shimmerWrap(isDark, _shimmerMainCard()),
+                    const SizedBox(height: 16),
+                    _shimmerWrap(isDark, _shimmerPointsStreakRow()),
+                    const SizedBox(height: 16),
+                    _shimmerWrap(isDark, _shimmerLevelGoalCard()),
+                    const SizedBox(height: 24),
+                    _shimmerSpotlight(isDark),
+                    const SizedBox(height: 16),
+                    _shimmerWeeklyCard(isDark),
+                    const SizedBox(height: 16),
+                    _shimmerMissionsCard(isDark),
+                    const SizedBox(height: 16),
+                    _shimmerContainer(height: 70, radius: 20),
+                    const SizedBox(height: 16),
+                    _shimmerClanCard(isDark),
+                    const SizedBox(height: 16),
+                    _shimmerWrap(
+                      isDark,
+                      _shimmerContainer(height: 60, radius: 16),
+                    ),
+                    const SizedBox(height: 16),
+                    _shimmerWrap(
+                      isDark,
+                      _shimmerContainer(height: 160, radius: 16),
+                    ),
+                    const SizedBox(height: 24),
+                  ],
+                ),
+              )
             : RefreshIndicator(
                 onRefresh: () async {
+                  await _syncSteps();
                   await _loadStats();
                   await _loadWeeklyActivity();
                   await _loadMissions();
+                  await _loadClanData();
                 },
                 color: cs.primary,
                 child: SingleChildScrollView(
@@ -474,15 +778,38 @@ class _DashboardScreenState extends State<DashboardScreen>
                     children: [
                       const SizedBox(height: 12),
                       _buildHeader(isDark, textPrimary, textSecondary),
-                      const SizedBox(height: 16),
-                      _buildLevelStreak(
+                      const SizedBox(height: 24),
+                      _buildMainDashboardCard(
                         isDark,
                         card,
                         textPrimary,
                         textSecondary,
                       ),
                       const SizedBox(height: 16),
-                      _buildStepRing(isDark, card, textPrimary, textSecondary),
+                      _buildStatsOverviewRow(
+                        isDark,
+                        card,
+                        textPrimary,
+                        textSecondary,
+                      ),
+                      const SizedBox(height: 24),
+                      _buildMissionsCard(
+                        isDark,
+                        card,
+                        textPrimary,
+                        textSecondary,
+                      ),
+                      const SizedBox(height: 16),
+                      _buildMapPreview(isDark, textPrimary, textSecondary),
+                      const SizedBox(height: 16),
+                      _buildClanCard(isDark, card, textPrimary, textSecondary),
+                      const SizedBox(height: 16),
+                      _buildLocalSpotlight(
+                        isDark,
+                        card,
+                        textPrimary,
+                        textSecondary,
+                      ),
                       const SizedBox(height: 16),
                       _buildWeeklyActivityCard(
                         isDark,
@@ -491,23 +818,12 @@ class _DashboardScreenState extends State<DashboardScreen>
                         textSecondary,
                       ),
                       const SizedBox(height: 16),
-                      _buildMissionsCard(
+                      _buildEarnPeCard(
                         isDark,
                         card,
                         textPrimary,
                         textSecondary,
                       ),
-                      const SizedBox(height: 16),
-                      _buildNudgeCard(isDark, textPrimary, textSecondary),
-                      const SizedBox(height: 20),
-                      _buildLocalSpotlight(
-                        isDark,
-                        card,
-                        textPrimary,
-                        textSecondary,
-                      ),
-                      const SizedBox(height: 16),
-                      _buildMapPreview(isDark, textPrimary, textSecondary),
                       const SizedBox(height: 24),
                     ],
                   ),
@@ -517,206 +833,220 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  Widget _buildHeader(bool isDark, Color textPrimary, Color textSecondary) {
+  Widget _avatarPlaceholder(bool isDark) {
+    return Container(
+      color: isDark ? AppColors.cardDark : const Color(0xFFE8EDF2),
+      child: Icon(
+        Icons.person,
+        size: 20,
+        color: isDark ? AppColors.textSecondaryDark : const Color(0xFF9BABB8),
+      ),
+    );
+  }
+
+  Widget _shimmerWrap(bool isDark, Widget child) {
+    return Shimmer.fromColors(
+      baseColor: isDark ? const Color(0xFF2A2F3A) : const Color(0xFFE8EDF2),
+      highlightColor: isDark
+          ? const Color(0xFF3A3F4A)
+          : const Color(0xFFF5F7FA),
+      period: const Duration(milliseconds: 1200),
+      child: child,
+    );
+  }
+
+  Widget _shimmerContainer({
+    double? width,
+    double? height,
+    double radius = 12,
+  }) {
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(radius),
+      ),
+    );
+  }
+
+  Widget _shimmerMainCard() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF4A9BFF), Color(0xFF207AF5)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _shimmerContainer(width: 100, height: 16),
+              const SizedBox(height: 12),
+              _shimmerContainer(width: 140, height: 40, radius: 8),
+              const SizedBox(height: 12),
+              _shimmerContainer(width: 130, height: 14),
+            ],
+          ),
+          _shimmerContainer(width: 100, height: 100, radius: 50),
+        ],
+      ),
+    );
+  }
+
+  Widget _shimmerPointsStreakRow() {
     return Row(
       children: [
-        GestureDetector(
-          onTap: widget.onOpenSettings,
-          child: Container(
-            width: 40,
-            height: 40,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              color: AppColors.primaryLight,
-            ),
-            child: ClipOval(
-              child: Image.network(
-                'https://i.pravatar.cc/80',
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => const Icon(
-                  Icons.person_rounded,
-                  color: Colors.white,
-                  size: 22,
-                ),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Text(
-          'Exploria',
-          style: const TextStyle(
-            color: AppColors.primary,
-            fontSize: 20,
-            fontWeight: FontWeight.w800,
-            letterSpacing: -0.3,
-          ),
-        ),
-        const Spacer(),
-        Container(
-          width: 38,
-          height: 38,
-          decoration: BoxDecoration(
-            color: isDark ? AppColors.cardDark : AppColors.cardLight,
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: isDark ? AppColors.dividerDark : AppColors.dividerLight,
-            ),
-          ),
-          child: const Icon(
-            Icons.notifications_none_rounded,
-            size: 20,
-            color: AppColors.primary,
-          ),
-        ),
+        Expanded(child: _shimmerContainer(height: 88)),
+        const SizedBox(width: 16),
+        Expanded(child: _shimmerContainer(height: 88)),
       ],
     );
   }
 
-  Widget _buildLevelStreak(
-    bool isDark,
-    Color card,
-    Color textPrimary,
-    Color textSecondary,
-  ) {
-    return Row(
-      children: [
-        // Level card
-        Expanded(
-          child: GestureDetector(
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => LevelProgressScreen(
-                    level: _level,
-                    xpTotal: _xpTotal,
-                    levelStartXp: _xpCurrentLevelStart,
-                    nextLevelXp: _xpNextLevelTarget,
-                    nextLevel: _nextLevel,
-                    levelBaseXp: _levelBaseXp,
-                    levelGrowthXp: _levelGrowthXp,
-                    maxLevel: _maxLevel,
-                    isMaxLevel: _isMaxLevel,
-                  ),
-                ),
-              );
-            },
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.primary,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Text(
-                        'NIVEL\nACTUAL',
-                        style: TextStyle(
-                          color: Colors.white60,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0.5,
-                          height: 1.3,
-                        ),
-                      ),
-                      const Spacer(),
-                      Container(
-                        width: 32,
-                        height: 32,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withAlpha(30),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.military_tech_rounded,
-                          color: Colors.white,
-                          size: 18,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    'Level $_level',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  Text(
-                    _levelTitle,
-                    style: const TextStyle(color: Colors.white70, fontSize: 13),
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Ver progresión',
-                    style: TextStyle(color: Colors.white70, fontSize: 11),
-                  ),
-                ],
-              ),
-            ),
-          ),
+  Widget _shimmerLevelGoalCard() {
+    return _shimmerContainer(height: 204);
+  }
+
+  Widget _shimmerWeeklyCard(bool isDark) {
+    return _shimmerWrap(
+      isDark,
+      Container(
+        height: 170,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
         ),
-        const SizedBox(width: 12),
-        // Streak card â€“ white bg
-        Expanded(
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: card,
-              borderRadius: BorderRadius.circular(20),
+        child: Column(
+          children: [
+            _shimmerContainer(width: 160, height: 16),
+            const SizedBox(height: 32),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: List.generate(
+                7,
+                (_) => _shimmerContainer(width: 28, height: 28, radius: 14),
+              ),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _shimmerMissionsCard(bool isDark) {
+    return _shimmerWrap(
+      isDark,
+      Container(
+        height: 150,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
+                _shimmerContainer(width: 130, height: 16),
+                _shimmerContainer(width: 80, height: 24, radius: 12),
+              ],
+            ),
+            const SizedBox(height: 8),
+            _shimmerContainer(width: 200, height: 12),
+            const SizedBox(height: 16),
+            _shimmerContainer(width: double.infinity, height: 6, radius: 3),
+            const SizedBox(height: 16),
+            _shimmerContainer(width: double.infinity, height: 6, radius: 3),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _shimmerClanCard(bool isDark) {
+    return _shimmerWrap(
+      isDark,
+      Container(
+        height: 90,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          children: [
+            _shimmerContainer(width: 48, height: 48, radius: 14),
+            const SizedBox(width: 14),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _shimmerContainer(width: 120, height: 14),
+                const SizedBox(height: 8),
+                _shimmerContainer(width: 180, height: 12),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _shimmerSpotlight(bool isDark) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _shimmerContainer(width: 160, height: 16),
+            _shimmerContainer(width: 60, height: 14),
+          ],
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 180,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: 2,
+            separatorBuilder: (_, __) => const SizedBox(width: 12),
+            itemBuilder: (_, __) => _shimmerWrap(
+              isDark,
+              Container(
+                width: 240,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Row(
                   children: [
-                    Text(
-                      'RACHA\nACTIVA',
-                      style: TextStyle(
-                        color: textSecondary,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.5,
-                        height: 1.3,
-                      ),
-                    ),
-                    const Spacer(),
-                    Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFF0E0),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Center(
-                        child: Icon(
-                          Icons.local_fire_department_rounded,
-                          color: Color(0xFFE8691B),
-                          size: 18,
-                        ),
-                      ),
+                    _shimmerContainer(width: 72, height: 72, radius: 12),
+                    const SizedBox(width: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _shimmerContainer(width: 100, height: 14),
+                        const SizedBox(height: 6),
+                        _shimmerContainer(width: 80, height: 12),
+                        const SizedBox(height: 6),
+                        _shimmerContainer(width: 60, height: 12),
+                      ],
                     ),
                   ],
                 ),
-                const SizedBox(height: 10),
-                Text(
-                  '$_streak Días',
-                  style: TextStyle(
-                    color: textPrimary,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                Text(
-                  '¡Seguí así!',
-                  style: TextStyle(color: textSecondary, fontSize: 13),
-                ),
-              ],
+              ),
             ),
           ),
         ),
@@ -724,245 +1054,1006 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  Widget _buildStepRing(
+  Widget _buildHeader(bool isDark, Color textPrimary, Color textSecondary) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Row(
+          children: [
+            IconButton(
+              icon: Icon(
+                Icons.menu,
+                color: isDark
+                    ? AppColors.textPrimaryDark
+                    : const Color(0xFF112A46),
+              ),
+              onPressed: widget.onOpenSettings,
+              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+              padding: const EdgeInsets.all(4),
+              splashRadius: 20,
+            ),
+            const SizedBox(width: 4),
+            GestureDetector(
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                );
+              },
+              child: ClipOval(
+                child: SizedBox(
+                  width: 34,
+                  height: 34,
+                  child: _avatarUrl != null
+                      ? Image.network(
+                          _avatarUrl!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) =>
+                              _avatarPlaceholder(isDark),
+                          loadingBuilder: (ctx, child, progress) =>
+                              progress == null
+                              ? child
+                              : _avatarPlaceholder(isDark),
+                        )
+                      : _avatarPlaceholder(isDark),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '¡Hola!',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : const Color(0xFF6B7A8D),
+                    height: 1.1,
+                  ),
+                ),
+                Text(
+                  _userName.isNotEmpty ? _userName : 'Explorador',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: isDark
+                        ? AppColors.textPrimaryDark
+                        : const Color(0xFF112A46),
+                    height: 1.2,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ],
+        ),
+        const Spacer(),
+        // RichText(
+        //   text: TextSpan(
+        //     style: TextStyle(
+        //       fontSize: 22,
+        //       fontWeight: FontWeight.w900,
+        //       color: isDark ? AppColors.textPrimaryDark : const Color(0xFF112A46),
+        //       letterSpacing: 1.0,
+        //     ),
+        //     children: [
+        //       const TextSpan(text: 'EXPL'),
+        //       WidgetSpan(
+        //         alignment: PlaceholderAlignment.middle,
+        //         child: Padding(
+        //           padding: const EdgeInsets.symmetric(horizontal: 1.0),
+        //           child: Stack(
+        //             alignment: Alignment.center,
+        //             children: [
+        //               const Icon(
+        //                 Icons.location_on,
+        //                 size: 24,
+        //                 color: Color(0xFF20D4A4),
+        //               ),
+        //               Positioned(
+        //                 top: 5,
+        //                 child: Container(
+        //                   width: 6,
+        //                   height: 6,
+        //                   decoration: const BoxDecoration(
+        //                     color: Colors.white,
+        //                     shape: BoxShape.circle,
+        //                   ),
+        //                 ),
+        //               ),
+        //             ],
+        //           ),
+        //         ),
+        //       ),
+        //       const TextSpan(text: 'RIA'),
+        //     ],
+        //   ),
+        // ),
+        Stack(
+          children: [
+            IconButton(
+              icon: Icon(
+                Icons.notifications_none_outlined,
+                color: isDark
+                    ? AppColors.textPrimaryDark
+                    : const Color(0xFF112A46),
+              ),
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const NotificationsScreen(),
+                  ),
+                );
+              },
+            ),
+            if (_notificationUnread > 0)
+              Positioned(
+                right: 10,
+                top: 10,
+                child: Container(
+                  constraints: const BoxConstraints(
+                    minWidth: 18,
+                    minHeight: 18,
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.danger,
+                    borderRadius: BorderRadius.circular(9),
+                  ),
+                  child: Text(
+                    _notificationUnread > 99 ? '99+' : '$_notificationUnread',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMainDashboardCard(
     bool isDark,
     Color card,
     Color textPrimary,
     Color textSecondary,
   ) {
-    final stepProgress = (_totalSteps / _dailyGoal).clamp(0.0, 1.0);
-    final stepPct = (stepProgress * 100).round();
-    final xpDenominator = (_xpNextLevelTarget - _xpCurrentLevelStart);
-    final xpProgress = _isMaxLevel || xpDenominator <= 0
-      ? 1.0
-      : ((_xpTotal - _xpCurrentLevelStart) / xpDenominator).clamp(0.0, 1.0);
+    final t1Fraction = (_totalSteps / _dailyGoal).clamp(0.0, 1.0);
+    final t2Steps = (_totalSteps - _dailyGoal).clamp(0, _dailyGoal);
+    final t2Fraction = _dailyGoal > 0 ? t2Steps / _dailyGoal : 0.0;
+    final t3Steps = (_totalSteps - 2 * _dailyGoal).clamp(0, _dailyGoal);
+    final t3Fraction = _dailyGoal > 0 ? t3Steps / _dailyGoal : 0.0;
+    final stepPct = ((_totalSteps / _dailyGoal) * 100).round();
     final stepsFormatted = _totalSteps.toString().replaceAllMapped(
       RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-      (m) => '${m[1]},',
+      (m) => '${m[1]}.',
     );
+    final goalFormatted = _dailyGoal.toString().replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (m) => '${m[1]}.',
+    );
+    final earnedToday = _tieredPE(_totalSteps);
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
+      height: 320,
       decoration: BoxDecoration(
-        color: card,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: isDark
+            ? []
+            : [
+                BoxShadow(
+                  color: const Color(0xFF1A4D8F).withAlpha(35),
+                  blurRadius: 22,
+                  offset: const Offset(0, 10),
+                ),
+              ],
       ),
-      child: Column(
-        children: [
-          Stack(
-            alignment: Alignment.topRight,
-            children: [
-              SizedBox(
-                width: double.infinity,
-                child: Column(
-                  children: [
-                    SizedBox(
-                      width: 200,
-                      height: 200,
-                      child: CustomPaint(
-                        painter: _RingPainter(
-                          progress: stepProgress,
-                          isDark: isDark,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.asset(
+              'assets/dashboard-hero.png',
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Color(0xFF4A9BFF), Color(0xFF207AF5)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+              ),
+            ),
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                  colors: [
+                    const Color(0xFF1A4D8F).withAlpha(220),
+                    const Color(0xFF2E78F0).withAlpha(140),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 22, 20, 20),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Pasos de hoy',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
-                        child: Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              SlideTransition(
-                                position: _walkerOffset,
-                                child: AnimatedBuilder(
-                                  animation: _walkerTilt,
-                                  builder: (context, child) {
-                                    return Transform.rotate(
-                                      angle: _walkerTilt.value,
-                                      child: child,
-                                    );
-                                  },
-                                  child: const Icon(
-                                    Icons.directions_run_rounded,
-                                    color: AppColors.primary,
-                                    size: 34,
+                        const SizedBox(height: 10),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: RichText(
+                            text: TextSpan(
+                              children: [
+                                TextSpan(
+                                  text: stepsFormatted,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 42,
+                                    fontWeight: FontWeight.w800,
+                                    height: 1,
                                   ),
                                 ),
+                                const TextSpan(
+                                  text: ' pasos',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(999),
+                          child: SizedBox(
+                            width: 190,
+                            child: LinearProgressIndicator(
+                              value: t1Fraction,
+                              minHeight: 10,
+                              backgroundColor: Colors.white.withAlpha(80),
+                              valueColor: const AlwaysStoppedAnimation<Color>(
+                                Color(0xFF2C78FF),
                               ),
-                              const SizedBox(height: 4),
-                              Text(
-                                stepsFormatted,
-                                style: TextStyle(
-                                  color: textPrimary,
-                                  fontSize: 30,
-                                  fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          'Meta: $goalFormatted pasos',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const Spacer(),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withAlpha(20),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 32,
+                                height: 32,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF22C38E).withAlpha(30),
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: const Icon(
+                                  Icons.star_rounded,
+                                  color: Color(0xFF22C38E),
+                                  size: 20,
                                 ),
                               ),
-                              Text(
-                                'Meta: ${_dailyGoal ~/ 1000}.000',
-                                style: TextStyle(
-                                  color: textSecondary,
-                                  fontSize: 13,
+                              const SizedBox(width: 10),
+                              Flexible(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      '+$earnedToday PE',
+                                      style: const TextStyle(
+                                        color: Color(0xFF1A2F4B),
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                    ),
+                                    const Text(
+                                      'obtenidos hoy',
+                                      style: TextStyle(
+                                        color: Color(0xFF41566F),
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
                           ),
                         ),
-                      ),
+                      ],
                     ),
-                  ],
-                ),
-              ),
-              // Badge minimalista de monedas - clickeable
-              Positioned(
-                top: 1,
-                right: 1,
-                child: GestureDetector(
-                  onTap: widget.onNavigateToPremios,
-                  child: ScaleTransition(
-                    scale: _celebrationScale,
-                    child: Container(
-                      padding: const EdgeInsets.fromLTRB(10, 8, 12, 8),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFFFFD88A), Color(0xFFF7B94A)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
+                  ),
+                  const SizedBox(width: 16),
+                  SizedBox(
+                    width: 132,
+                    height: 132,
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        CustomPaint(
+                          painter: _SegmentedRingPainter(
+                            t1Fraction: t1Fraction,
+                            t2Fraction: t2Fraction,
+                            t3Fraction: t3Fraction,
+                            backgroundColor: Colors.white.withAlpha(80),
+                            totalSteps: _totalSteps,
+                            dailyGoal: _dailyGoal,
+                          ),
                         ),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: Colors.white.withAlpha(140)),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFFE19A2F).withAlpha(90),
-                            blurRadius: 14,
-                            offset: const Offset(0, 6),
+                        Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                '$stepPct%',
+                                style: const TextStyle(
+                                  color: Color(0xFF153761),
+                                  fontSize: 26,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              const Text(
+                                'del objetivo',
+                                style: TextStyle(
+                                  color: Color(0xFF153761),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: 20,
-                            height: 20,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withAlpha(170),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.emoji_events_rounded,
-                              size: 13,
-                              color: Color(0xFF7A4A00),
-                            ),
-                          ),
-                          const SizedBox(width: 7),
-                          Text(
-                            '$_livePe PE',
-                            style: const TextStyle(
-                              color: Color(0xFF3A2600),
-                              fontWeight: FontWeight.w900,
-                              fontSize: 15,
-                              height: 1.0,
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatsOverviewRow(
+    bool isDark,
+    Color card,
+    Color textPrimary,
+    Color textSecondary,
+  ) {
+    return Column(
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              flex: 11,
+              child: _buildDashboardMetricCard(
+                isDark: isDark,
+                card: card,
+                title: 'Puntos Exploria',
+                accent: const Color(0xFF20D4A4),
+                icon: Icons.star_rounded,
+                value: _livePe.toString().replaceAllMapped(
+                  RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+                  (m) => '${m[1]}.',
+                ),
+                footer: _xpToday > 0 ? '+$_xpToday hoy' : 'Seguí caminando',
+                footerColor: const Color(0xFF1FB978),
+                textPrimary: textPrimary,
+                textSecondary: textSecondary,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              flex: 9,
+              child: _buildDashboardMetricCard(
+                isDark: isDark,
+                card: card,
+                title: 'Racha',
+                accent: const Color(0xFFFF6B00),
+                icon: Icons.local_fire_department_rounded,
+                value: '$_streak',
+                footer: _streak == 1 ? 'día seguido' : 'días seguidos',
+                footerColor: const Color(0xFFFF6B00),
+                textPrimary: textPrimary,
+                textSecondary: textSecondary,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        _buildLevelOverviewCard(
+          isDark,
+          card,
+          textPrimary,
+          textSecondary,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDashboardMetricCard({
+    required bool isDark,
+    required Color card,
+    required String title,
+    required Color accent,
+    required IconData icon,
+    required String value,
+    required String footer,
+    required Color footerColor,
+    required Color textPrimary,
+    required Color textSecondary,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: card,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: isDark
+            ? []
+            : [
+                BoxShadow(
+                  color: Colors.black.withAlpha(10),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              color: textPrimary,
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 18),
+          Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: accent.withAlpha(24),
+                  borderRadius: BorderRadius.circular(22),
+                ),
+                child: Icon(icon, color: accent, size: 28),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    value,
+                    style: TextStyle(
+                      color: textPrimary,
+                      fontSize: 24,
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Text(
-                'XP de Experiencia',
-                style: TextStyle(color: textSecondary, fontSize: 13),
-              ),
-              const Spacer(),
-              Text(
-                '$_xpToday XP hoy',
-                style: const TextStyle(
-                  color: AppColors.primary,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: xpProgress,
-              backgroundColor: isDark
-                  ? AppColors.dividerDark
-                  : AppColors.dividerLight,
-              color: stepPct >= 100
-                  ? const Color(0xFF10B981)
-                  : AppColors.primary,
-              minHeight: 6,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              _isMaxLevel
-                  ? 'Nivel máximo alcanzado (Nivel $_maxLevel)'
-                  : 'Te faltan ${(_xpNextLevelTarget - _xpTotal).clamp(0, 999999)} XP para nivel $_nextLevel',
-              style: TextStyle(color: textSecondary, fontSize: 12),
+          const SizedBox(height: 14),
+          Text(
+            footer,
+            style: TextStyle(
+              color: footerColor,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildLevelOverviewCard(
+    bool isDark,
+    Color card,
+    Color textPrimary,
+    Color textSecondary,
+  ) {
+    final currentLevelXp = math.max(0, _xpTotal - _xpCurrentLevelStart);
+    final nextLevelXp = math.max(1, _xpNextLevelTarget - _xpCurrentLevelStart);
+    final progress = _isMaxLevel
+        ? 1.0
+        : (currentLevelXp / nextLevelXp).clamp(0.0, 1.0);
+
+    return GestureDetector(
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => LevelProgressScreen(
+              level: _level,
+              xpTotal: _xpTotal,
+              levelStartXp: _xpCurrentLevelStart,
+              nextLevelXp: _xpNextLevelTarget,
+              nextLevel: _nextLevel,
+              levelBaseXp: _levelBaseXp,
+              levelGrowthXp: _levelGrowthXp,
+              maxLevel: _maxLevel,
+              isMaxLevel: _isMaxLevel,
+            ),
+          ),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: card,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: isDark
+              ? []
+              : [
+                  BoxShadow(
+                    color: Colors.black.withAlpha(10),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Nivel $_level',
+                        style: TextStyle(
+                          color: textPrimary,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        _levelTitle,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: AppColors.primary,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          height: 1.1,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF2E78F0).withAlpha(24),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Icon(
+                    Icons.shield_rounded,
+                    color: AppColors.primary,
+                    size: 24,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(999),
+              child: LinearProgressIndicator(
+                value: progress,
+                minHeight: 8,
+                backgroundColor: isDark
+                    ? AppColors.dividerDark
+                    : const Color(0xFFE5EAF2),
+                valueColor: const AlwaysStoppedAnimation<Color>(
+                  AppColors.primary,
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              _isMaxLevel
+                  ? 'Nivel máximo alcanzado'
+                  : '$currentLevelXp / $nextLevelXp XP',
+              style: TextStyle(
+                color: textSecondary,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   // Pepitas conversion removed as part of rebranding to PE
 
-  Widget _buildNudgeCard(bool isDark, Color textPrimary, Color textSecondary) {
-    final stepsLeft = math.max(0, 500 - (_totalSteps % 500));
+  Widget _buildClanCard(
+    bool isDark,
+    Color card,
+    Color textPrimary,
+    Color textSecondary,
+  ) {
+    if (_clanLoading) {
+      return _shimmerClanCard(isDark);
+    }
+
+    final hasClan = _clanData != null;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.cardAltDark : const Color(0xFFEAEDF5),
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: isDark ? AppColors.cardDark : Colors.white,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(
-              Icons.local_cafe_rounded,
-              color: AppColors.primary,
-              size: 22,
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Café Mañanero',
-                  style: TextStyle(
-                    color: textPrimary,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 15,
-                  ),
-                ),
-                Text(
-                  '$stepsLeft pasos para el café',
-                  style: TextStyle(color: textSecondary, fontSize: 13),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: isDark
+            ? []
+            : [
+                BoxShadow(
+                  color: Colors.black.withAlpha(15),
+                  blurRadius: 14,
+                  offset: const Offset(0, 6),
                 ),
               ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: Stack(
+          children: [
+            // Background image
+            SizedBox(
+              height: 168,
+              width: double.infinity,
+              child: Image.asset(
+                'assets/dashboard-clan.png',
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(
+                  color: hasClan
+                      ? AppColors.primary.withAlpha(30)
+                      : (isDark
+                            ? AppColors.cardAltDark
+                            : const Color(0xFFE8EDF5)),
+                ),
+              ),
             ),
+            // Gradient overlay
+            Container(
+              height: 168,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withAlpha(hasClan ? 80 : 40),
+                    Colors.black.withAlpha(hasClan ? 160 : 120),
+                  ],
+                ),
+              ),
+            ),
+            // Content
+            SizedBox(
+              height: 168,
+              child: Column(
+                children: [
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () {
+                        if (hasClan) {
+                          Navigator.of(context)
+                              .push(
+                                MaterialPageRoute(
+                                  builder: (_) => ClanDetailScreen(
+                                    clanId: _clanData!.clanId,
+                                    isViewingOwn: true,
+                                  ),
+                                ),
+                              )
+                              .then((_) => _loadClanData());
+                        } else {
+                          Navigator.of(context)
+                              .push(
+                                MaterialPageRoute(
+                                  builder: (_) => const ClanListScreen(),
+                                ),
+                              )
+                              .then((_) => _loadClanData());
+                        }
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 48,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withAlpha(30),
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              child: Icon(
+                                hasClan
+                                    ? Icons.groups_rounded
+                                    : Icons.group_add_rounded,
+                                color: Colors.white,
+                                size: 24,
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    hasClan ? _clanData!.clanName : 'Clanes',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    hasClan
+                                        ? '#${_clanData!.memberRank} de ${_clanData!.totalMembers} · ${_clanData!.personalSeasonInfluence} influencia'
+                                        : 'Unite o creá un clan',
+                                    style: TextStyle(
+                                      color: Colors.white.withAlpha(200),
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            const Icon(
+                              Icons.chevron_right_rounded,
+                              color: Colors.white70,
+                              size: 20,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const Spacer(),
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const ClanRankingsScreen(),
+                          ),
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withAlpha(15),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.emoji_events_rounded,
+                              size: 18,
+                              color: Color(0xFFFFB800),
+                            ),
+                            const SizedBox(width: 10),
+                            const Text(
+                              'Rankings de clanes',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                              ),
+                            ),
+                            const Spacer(),
+                            const Icon(
+                              Icons.chevron_right_rounded,
+                              color: Colors.white70,
+                              size: 18,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEarnPeCard(
+    bool isDark,
+    Color card,
+    Color textPrimary,
+    Color textSecondary,
+  ) {
+    Widget earnItem({
+      required IconData icon,
+      required String title,
+      required String subtitle,
+      required Color tint,
+    }) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.cardAltDark : const Color(0xFFF7F9FC),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: tint.withAlpha(22),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: tint, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      color: textPrimary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      color: textSecondary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right_rounded, color: textSecondary, size: 22),
+          ],
+        ),
+      );
+    }
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: () {
+          Navigator.of(
+            context,
+          ).push(MaterialPageRoute(builder: (_) => const EarnPeScreen()));
+        },
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: card,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: isDark
+                ? []
+                : [
+                    BoxShadow(
+                      color: Colors.black.withAlpha(10),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
           ),
-          Icon(Icons.chevron_right_rounded, color: textSecondary),
-        ],
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Ganar + PE',
+                style: TextStyle(
+                  color: textPrimary,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 12),
+              earnItem(
+                icon: Icons.card_giftcard_rounded,
+                title: 'Referidos',
+                subtitle: '+ PE inmediato',
+                tint: const Color(0xFF2E78F0),
+              ),
+              const SizedBox(height: 10),
+              earnItem(
+                icon: Icons.casino_rounded,
+                title: 'Ruleta diaria',
+                subtitle: 'Hasta 100 PE',
+                tint: const Color(0xFF5A84FF),
+              ),
+              const SizedBox(height: 10),
+              earnItem(
+                icon: Icons.stars_rounded,
+                title: 'Más formas de ganar',
+                subtitle: 'Misiones y acciones especiales',
+                tint: const Color(0xFFFFA63D),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -974,16 +2065,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     Color textSecondary,
   ) {
     if (_weeklyLoading) {
-      return Container(
-        height: 170,
-        decoration: BoxDecoration(
-          color: card,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: const Center(
-          child: CircularProgressIndicator(color: AppColors.primary),
-        ),
-      );
+      return _shimmerWeeklyCard(isDark);
     }
 
     final weekly = _weekly;
@@ -991,107 +2073,58 @@ class _DashboardScreenState extends State<DashboardScreen>
       return const SizedBox.shrink();
     }
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: card,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => WeeklyActivityScreen(weekly: weekly),
+            ),
+          );
+        },
         borderRadius: BorderRadius.circular(20),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+          decoration: BoxDecoration(
+            color: card,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Column(
             children: [
-              Text(
-                'Registro semanal',
-                style: TextStyle(
-                  color: textPrimary,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const Spacer(),
-              Text(
-                '${weekly.exerciseDaysCompleted} de ${weekly.exerciseGoalDays}',
-                style: const TextStyle(
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: weekly.days
-                .map(
-                  (d) => _buildDayBadge(d, isDark, textPrimary, textSecondary),
-                )
-                .toList(),
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              Expanded(
-                child: _buildWeeklyMetric(
-                  'Pasos',
-                  weekly.totalSteps.toString(),
-                  textPrimary,
-                  textSecondary,
-                ),
-              ),
-              Expanded(
-                child: _buildWeeklyMetric(
-                  'Distancia',
-                  '${weekly.totalDistanceKm.toStringAsFixed(2)} km',
-                  textPrimary,
-                  textSecondary,
-                ),
-              ),
-              Expanded(
-                child: _buildWeeklyMetric(
-                  'Calorías',
-                  weekly.totalCaloriesKcal != null
-                      ? '${weekly.totalCaloriesKcal!.toStringAsFixed(0)} kcal'
-                      : '--',
-                  textPrimary,
-                  textSecondary,
-                ),
-              ),
-            ],
-          ),
-          if (weekly.needsProfileData) ...[
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: isDark ? AppColors.cardAltDark : const Color(0xFFEAF3FF),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(
-                    Icons.info_outline_rounded,
-                    color: AppColors.primary,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      weekly.profileHint ??
-                          'Para un calculo mas preciso, completa tus datos en Ajustes.',
-                      style: TextStyle(color: textSecondary, fontSize: 12),
+                  Text(
+                    'Actividad semanal',
+                    style: TextStyle(
+                      color: textPrimary,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
-                  TextButton(
-                    onPressed: widget.onOpenSettings,
-                    child: const Text('Ir a Ajustes'),
-                  ),
+                  const SizedBox(width: 4),
+                  Icon(Icons.chevron_right_rounded, color: textSecondary),
                 ],
               ),
-            ),
-          ],
-        ],
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: weekly.days
+                    .map(
+                      (d) => _buildDayBadge(
+                        d,
+                        isDark,
+                        textPrimary,
+                        textSecondary,
+                        weekly.exerciseThresholdSteps,
+                      ),
+                    )
+                    .toList(),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -1101,60 +2134,58 @@ class _DashboardScreenState extends State<DashboardScreen>
     bool isDark,
     Color textPrimary,
     Color textSecondary,
+    int thresholdSteps,
   ) {
-    final bg = day.completed
-        ? AppColors.primary.withAlpha(40)
-        : (isDark ? AppColors.cardAltDark : const Color(0xFFF0F2F6));
-    final border = day.completed
-        ? AppColors.primary.withAlpha(120)
-        : Colors.transparent;
+    final progress = (day.steps / (thresholdSteps > 0 ? thresholdSteps : 5000))
+        .clamp(0.0, 1.0);
 
     return Column(
       children: [
-        Container(
-          width: 32,
-          height: 48,
-          decoration: BoxDecoration(
-            color: bg,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: border),
-          ),
-          child: Icon(
-            day.completed ? Icons.check_rounded : Icons.remove,
-            color: day.completed ? AppColors.primary : textSecondary,
-            size: 18,
-          ),
-        ),
-        const SizedBox(height: 6),
         Text(
           day.label,
           style: TextStyle(
-            color: textPrimary,
-            fontWeight: FontWeight.w700,
+            color: textSecondary,
+            fontWeight: FontWeight.w600,
             fontSize: 12,
           ),
         ),
-      ],
-    );
-  }
-
-  Widget _buildWeeklyMetric(
-    String title,
-    String value,
-    Color textPrimary,
-    Color textSecondary,
-  ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(title, style: TextStyle(color: textSecondary, fontSize: 12)),
-        const SizedBox(height: 3),
-        Text(
-          value,
-          style: TextStyle(
-            color: textPrimary,
-            fontWeight: FontWeight.w700,
-            fontSize: 14,
+        const SizedBox(height: 12),
+        SizedBox(
+          width: 28,
+          height: 28,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              if (day.completed) ...[
+                Container(
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF129B85),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.check_rounded,
+                    color: Colors.white,
+                    size: 18,
+                  ),
+                ),
+              ] else ...[
+                CircularProgressIndicator(
+                  value: 1.0,
+                  strokeWidth: 3,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    isDark ? AppColors.dividerDark : const Color(0xFFE2E8F0),
+                  ),
+                ),
+                CircularProgressIndicator(
+                  value: progress,
+                  strokeWidth: 3,
+                  valueColor: const AlwaysStoppedAnimation<Color>(
+                    Color(0xFF129B85),
+                  ),
+                  strokeCap: StrokeCap.round,
+                ),
+              ],
+            ],
           ),
         ),
       ],
@@ -1168,23 +2199,18 @@ class _DashboardScreenState extends State<DashboardScreen>
     Color textSecondary,
   ) {
     if (_missionsLoading) {
-      return Container(
-        height: 150,
-        decoration: BoxDecoration(
-          color: card,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: const Center(
-          child: CircularProgressIndicator(color: AppColors.primary),
-        ),
-      );
+      return _shimmerMissionsCard(isDark);
     }
 
-    if (_missions.isEmpty) {
+    final activeMissions = _missions
+        .where((m) => m.currentProgress > 0 || m.isCompleted)
+        .toList();
+
+    if (activeMissions.isEmpty) {
       return const SizedBox.shrink();
     }
 
-    final completedCount = _missions.where((m) => m.isCompleted).length;
+    final completedCount = activeMissions.where((m) => m.isCompleted).length;
 
     return Material(
       color: Colors.transparent,
@@ -1210,7 +2236,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                 children: [
                   Expanded(
                     child: Text(
-                      'Misiones Activas',
+                      'Misiones del día',
                       style: TextStyle(
                         color: textPrimary,
                         fontSize: 16,
@@ -1218,216 +2244,147 @@ class _DashboardScreenState extends State<DashboardScreen>
                       ),
                     ),
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withAlpha(26),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Text(
-                      '$completedCount/${_missions.length} realizadas',
-                      style: const TextStyle(
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => MissionsScreen(missions: _missions),
+                        ),
+                      );
+                    },
+                    child: const Text(
+                      'Ver todas',
+                      style: TextStyle(
                         color: AppColors.primary,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
-              Text(
-                'Toca para ver el detalle de tus misiones',
-                style: TextStyle(
-                  color: textSecondary,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
               const SizedBox(height: 12),
-              ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: _missions.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 12),
-                itemBuilder: (_, index) {
-                  final mission = _missions[index];
-                  final progressSteps =
-                      (mission.progressSteps / mission.targetSteps * 100)
-                          .clamp(0, 100)
-                          .toInt();
-                  final progressBusinesses =
-                      mission.nearbyBusinessesRequired > 0
-                      ? (mission.progressBusinesses /
-                                mission.nearbyBusinessesRequired *
-                                100)
-                            .clamp(0, 100)
-                            .toInt()
-                      : 0;
+              SizedBox(
+                height: 80,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: activeMissions.length,
+                  separatorBuilder: (_, __) => Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: VerticalDivider(
+                      width: 20,
+                      indent: 8,
+                      endIndent: 8,
+                      color: isDark ? AppColors.dividerDark : const Color(0xFFEEEEEE),
+                    ),
+                  ),
+                  itemBuilder: (_, index) {
+                    final mission = activeMissions[index];
+                    
+                    IconData iconData;
+                    Color iconColor;
+                    Color bgColor;
 
-                  return Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? AppColors.cardAltDark
-                          : const Color(0xFFF5F7FA),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: mission.isCompleted
-                            ? AppColors.primary
-                            : Colors.transparent,
-                        width: mission.isCompleted ? 2 : 0,
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    final type = mission.missionType.toLowerCase();
+                    final title = mission.title.toLowerCase();
+
+                    if (type.contains('step') || title.contains('paso')) {
+                      iconData = Icons.directions_walk_rounded;
+                      iconColor = const Color(0xFF22C38E);
+                      bgColor = const Color(0xFF22C38E).withOpacity(0.15);
+                    } else if (type.contains('poi') || title.contains('lugar')) {
+                      iconData = Icons.location_on_rounded;
+                      iconColor = const Color(0xFF8B5CF6);
+                      bgColor = const Color(0xFF8B5CF6).withOpacity(0.15);
+                    } else {
+                      iconData = Icons.storefront_rounded;
+                      iconColor = const Color(0xFF3B82F6);
+                      bgColor = const Color(0xFF3B82F6).withOpacity(0.15);
+                    }
+
+                    return Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                mission.title,
-                                style: TextStyle(
-                                  color: textPrimary,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
-                            if (mission.isCompleted)
-                              const Icon(
-                                Icons.check_circle_rounded,
-                                color: AppColors.primary,
-                                size: 20,
-                              )
-                            else
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppColors.primary.withAlpha(30),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  '${mission.rewardCoins}🪙',
-                                  style: const TextStyle(
-                                    color: AppColors.primary,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                        if (mission.description != null) ...[
-                          const SizedBox(height: 4),
-                          Text(
-                            mission.description!,
-                            style: TextStyle(
-                              color: textSecondary,
-                              fontSize: 11,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
+                        // Icon Circle
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: bgColor,
+                            shape: BoxShape.circle,
                           ),
-                        ],
-                        const SizedBox(height: 8),
-                        // Progress bars
+                          child: Icon(iconData, color: iconColor, size: 24),
+                        ),
+                        const SizedBox(width: 12),
+                        // Content
                         Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            // Pasos
-                            Row(
-                              children: [
-                                Text(
-                                  'Pasos',
-                                  style: TextStyle(
-                                    color: textSecondary,
-                                    fontSize: 10,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(4),
-                                    child: LinearProgressIndicator(
-                                      value: mission.targetSteps > 0
-                                          ? mission.progressSteps /
-                                                mission.targetSteps
-                                          : 0,
-                                      minHeight: 6,
-                                      backgroundColor: isDark
-                                          ? AppColors.cardDark
-                                          : const Color(0xFFE0E0E0),
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                        AppColors.primary.withAlpha(200),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  '$progressSteps%',
-                                  style: TextStyle(
-                                    color: textPrimary,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
+                            Text(
+                              mission.title,
+                              style: TextStyle(
+                                color: textPrimary,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
-                            const SizedBox(height: 8),
-                            // Comercios
+                            const SizedBox(height: 6),
                             Row(
                               children: [
-                                Text(
-                                  'Comercios',
-                                  style: TextStyle(
-                                    color: textSecondary,
-                                    fontSize: 10,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(4),
-                                    child: LinearProgressIndicator(
-                                      value:
-                                          mission.nearbyBusinessesRequired > 0
-                                          ? mission.progressBusinesses /
-                                                mission.nearbyBusinessesRequired
-                                          : 0,
-                                      minHeight: 6,
-                                      backgroundColor: isDark
-                                          ? AppColors.cardDark
-                                          : const Color(0xFFE0E0E0),
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                        AppColors.primary.withAlpha(200),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    SizedBox(
+                                      width: 70,
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(4),
+                                        child: LinearProgressIndicator(
+                                          value: mission.targetCount > 0
+                                              ? mission.currentProgress / mission.targetCount
+                                              : 0,
+                                          minHeight: 6,
+                                          backgroundColor: isDark
+                                              ? AppColors.cardDark
+                                              : const Color(0xFFE0E0E0),
+                                          valueColor: AlwaysStoppedAnimation<Color>(
+                                            mission.isCompleted ? const Color(0xFF22C38E) : iconColor,
+                                          ),
+                                        ),
                                       ),
                                     ),
-                                  ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      '${mission.currentProgress}/${mission.targetCount}',
+                                      style: TextStyle(
+                                        color: textSecondary,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                                 const SizedBox(width: 8),
-                                Text(
-                                  '$progressBusinesses%',
-                                  style: TextStyle(
-                                    color: textPrimary,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
+                                if (mission.isCompleted)
+                                  const Icon(
+                                    Icons.check_circle,
+                                    color: Color(0xFF22C38E),
+                                    size: 20,
+                                  )
+                                else
+                                  const SizedBox(width: 20),
                               ],
                             ),
                           ],
                         ),
+                        if (!mission.isCompleted) ...[
+                          const SizedBox(width: 12),
+                          Icon(Icons.chevron_right_rounded, color: textSecondary, size: 20),
+                        ],
                       ],
-                    ),
-                  );
-                },
+                    );
+                  },
+                ),
               ),
             ],
           ),
@@ -1450,7 +2407,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'Destacados del Barrio',
+              'Comercios destacados',
               style: TextStyle(
                 color: textPrimary,
                 fontSize: 16,
@@ -1474,17 +2431,12 @@ class _DashboardScreenState extends State<DashboardScreen>
 
         // ── Contenido ─────────────────────────────────────────
         if (_featuredLoading)
-          SizedBox(
-            height: 180,
-            child: Center(
-              child: CircularProgressIndicator(color: AppColors.primary),
-            ),
-          )
+          _shimmerSpotlight(isDark)
         else if (_featured.isEmpty)
           _buildFeaturedEmpty(isDark, card, textSecondary)
         else
           SizedBox(
-            height: 200,
+            height: 230,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               clipBehavior: Clip.none,
@@ -1512,141 +2464,128 @@ class _DashboardScreenState extends State<DashboardScreen>
   ) {
     return GestureDetector(
       onTap: () => widget.onNavigateToMap?.call(b),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: SizedBox(
-          width: 230,
-          height: 200,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              // Imagen de fondo
-              b.imageUrl != null
-                  ? Image.network(
-                      b.imageUrl!,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) =>
-                          _featuredPlaceholder(isDark),
-                    )
-                  : _featuredPlaceholder(isDark),
-
-              // Gradiente oscuro
-              Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [Colors.transparent, Colors.black.withAlpha(190)],
+      child: Container(
+        width: 180,
+        decoration: BoxDecoration(
+          color: card,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isDark ? AppColors.dividerDark : Colors.transparent,
+          ),
+          boxShadow: isDark
+              ? []
+              : [
+                  BoxShadow(
+                    color: Colors.black.withAlpha(10),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
                   ),
-                ),
+                ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Business Image (Top Half)
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+              child: SizedBox(
+                width: double.infinity,
+                height: 110,
+                child: b.imageUrl != null
+                    ? Image.network(
+                        b.imageUrl!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) =>
+                            _featuredPlaceholder(isDark),
+                      )
+                    : _featuredPlaceholder(isDark),
               ),
-
-              // Badge "Destacado"
-              Positioned(
-                left: 12,
-                top: 12,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 5,
+            ),
+            // Content
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    b.name,
+                    style: TextStyle(
+                      color: textPrimary,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withAlpha(220),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: const [
-                      Icon(
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      const Icon(
                         Icons.star_rounded,
-                        color: Color(0xFFE8A020),
-                        size: 13,
+                        color: Color(0xFF22C38E),
+                        size: 16,
                       ),
-                      SizedBox(width: 4),
-                      Text(
-                        'Destacado',
-                        style: TextStyle(
-                          color: Color(0xFF0F1428),
-                          fontWeight: FontWeight.w600,
-                          fontSize: 11,
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          b.offer ?? 'Promoción local',
+                          style: TextStyle(
+                            color: textSecondary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
                   ),
-                ),
-              ),
-
-              // Nombre + monedas
-              Positioned(
-                left: 12,
-                right: 12,
-                bottom: 12,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      b.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 5),
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withAlpha(200),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(
-                                Icons.eco_rounded,
-                                color: Colors.white,
-                                size: 12,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                '+${b.checkinRewardCoins}',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const Spacer(),
-                        Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withAlpha(220),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.map_rounded,
-                            color: AppColors.primary,
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.location_on,
+                            color: textSecondary,
                             size: 14,
                           ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${b.distanceM} m',
+                            style: TextStyle(
+                              color: textSecondary,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
                         ),
-                      ],
-                    ),
-                  ],
-                ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1B64F2),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          '${b.checkinRewardCoins} PE',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -1689,223 +2628,192 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   Widget _buildMapPreview(bool isDark, Color textPrimary, Color textSecondary) {
-    return Container(
-      height: 160,
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.cardAltDark : const Color(0xFFD8E4F5),
+    final canNavigateToMap = _featured.isNotEmpty;
+    final discoverLabel = _featured.isEmpty
+        ? 'Nuevos lugares para descubrir'
+        : '${_featured.length} lugares nuevos para descubrir';
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
         borderRadius: BorderRadius.circular(20),
-      ),
-      child: Stack(
-        children: [
-          // Map pattern (lines)
-          ClipRRect(
+        onTap: canNavigateToMap
+            ? () => widget.onNavigateToMap?.call(_featured.first)
+            : null,
+        child: Container(
+          height: 160,
+          decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
-            child: CustomPaint(
-              size: const Size(double.infinity, 160),
-              painter: _MapPatternPainter(isDark: isDark),
-            ),
+            boxShadow: isDark
+                ? []
+                : [
+                    BoxShadow(
+                      color: const Color(0xFF1A4D8F).withAlpha(22),
+                      blurRadius: 18,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
           ),
-          // Explore pill
-          Center(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(30),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withAlpha(30),
-                    blurRadius: 10,
-                    offset: const Offset(0, 3),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                Image.asset(
+                  'assets/dashboard-descubre.png',
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    color: isDark
+                        ? AppColors.cardAltDark
+                        : const Color(0xFFD8E4F5),
                   ),
-                ],
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(
-                    Icons.explore_rounded,
-                    color: AppColors.primary,
-                    size: 18,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Explorar rutas cercanas',
-                    style: TextStyle(
-                      color: textPrimary,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
+                ),
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        const Color(0xFF204A8D).withAlpha(180),
+                        const Color(0xFF2E78F0).withAlpha(70),
+                      ],
                     ),
                   ),
-                ],
-              ),
-            ),
-          ),
-          // Walking FAB
-          Positioned(
-            bottom: 14,
-            right: 14,
-            child: Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: AppColors.primary,
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primary.withAlpha(80),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(18),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Row(
+                        children: [
+                          Text(
+                            'Explorá hoy',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          Spacer(),
+                          Icon(
+                            Icons.chevron_right_rounded,
+                            color: Colors.white,
+                            size: 24,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        discoverLabel,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 10,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1F5DDA),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Ver mapa',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            SizedBox(width: 6),
+                            Icon(
+                              Icons.location_on_rounded,
+                              color: Colors.white,
+                              size: 16,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              child: const Icon(
-                Icons.directions_walk_rounded,
-                color: Colors.white,
-                size: 26,
-              ),
+                ),
+              ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
 }
 
-class _RingPainter extends CustomPainter {
-  final double progress;
-  final bool isDark;
+class _SegmentedRingPainter extends CustomPainter {
+  _SegmentedRingPainter({
+    required this.t1Fraction,
+    required this.t2Fraction,
+    required this.t3Fraction,
+    required this.backgroundColor,
+    required this.totalSteps,
+    required this.dailyGoal,
+  });
 
-  _RingPainter({required this.progress, required this.isDark});
+  final double t1Fraction;
+  final double t2Fraction;
+  final double t3Fraction;
+  final Color backgroundColor;
+  final int totalSteps;
+  final int dailyGoal;
 
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
-    final radius = size.width / 2 - 12;
-    const strokeWidth = 16.0;
+    const strokeWidth = 10.0;
+    final radius = (size.width - strokeWidth) / 2;
+    final rect = Rect.fromCircle(center: center, radius: radius);
 
-    final bgPaint = Paint()
-      ..color = isDark ? AppColors.dividerDark : AppColors.dividerLight
-      ..strokeWidth = strokeWidth
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-    canvas.drawCircle(center, radius, bgPaint);
-
-    final fgPaint = Paint()
-      ..color = AppColors.primary
-      ..strokeWidth = strokeWidth
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: radius),
-      -math.pi / 2,
-      2 * math.pi * progress,
-      false,
-      fgPaint,
-    );
-  }
-
-  @override
-  bool shouldRepaint(_RingPainter old) =>
-      old.progress != progress || old.isDark != isDark;
-}
-
-class _MapPatternPainter extends CustomPainter {
-  final bool isDark;
-  _MapPatternPainter({required this.isDark});
-
-  @override
-  void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = isDark
-          ? const Color(0xFF2A3550).withAlpha(120)
-          : const Color(0xFFB0C4DE).withAlpha(180)
-      ..strokeWidth = 2
-      ..style = PaintingStyle.stroke;
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round;
 
-    // Horizontal road lines
-    canvas.drawLine(
-      Offset(0, size.height * 0.35),
-      Offset(size.width * 0.55, size.height * 0.35),
-      paint,
-    );
-    canvas.drawLine(
-      Offset(size.width * 0.55, size.height * 0.35),
-      Offset(size.width, size.height * 0.6),
-      paint,
-    );
-    canvas.drawLine(
-      Offset(0, size.height * 0.65),
-      Offset(size.width * 0.4, size.height * 0.65),
-      paint,
-    );
-    canvas.drawLine(
-      Offset(size.width * 0.3, size.height * 0.2),
-      Offset(size.width * 0.3, size.height * 0.65),
-      paint,
-    );
-    canvas.drawLine(
-      Offset(size.width * 0.6, size.height * 0),
-      Offset(size.width * 0.6, size.height * 0.35),
-      paint,
-    );
+    paint.color = backgroundColor;
+    canvas.drawCircle(center, radius, paint);
 
-    // Dashed route line
-    final routePaint = Paint()
-      ..color = AppColors.primary.withAlpha(isDark ? 180 : 140)
-      ..strokeWidth = 2.5
-      ..style = PaintingStyle.stroke;
+    const startAngle = -math.pi / 2;
 
-    final path = Path()
-      ..moveTo(size.width * 0.1, size.height * 0.65)
-      ..lineTo(size.width * 0.3, size.height * 0.65)
-      ..lineTo(size.width * 0.3, size.height * 0.35)
-      ..lineTo(size.width * 0.55, size.height * 0.35);
+    if (t1Fraction > 0) {
+      paint.color = const Color(0xFF20D4A4);
+      canvas.drawArc(rect, startAngle, 2 * math.pi * t1Fraction, false, paint);
+    }
 
-    _drawDashedPath(canvas, path, routePaint, 8, 5);
+    if (totalSteps > dailyGoal) {
+      final t2Start = startAngle + 2 * math.pi * t1Fraction;
+      if (t2Fraction > 0) {
+        paint.color = const Color(0xFFFF6B00);
+        canvas.drawArc(rect, t2Start, 2 * math.pi * t2Fraction, false, paint);
+      }
 
-    // Pin / location dot
-    final dotPaint = Paint()
-      ..color = AppColors.primary
-      ..style = PaintingStyle.fill;
-    canvas.drawCircle(
-      Offset(size.width * 0.55, size.height * 0.35),
-      6,
-      dotPaint,
-    );
-
-    // Triangle pointing down (destination marker)
-    final trianglePaint = Paint()
-      ..color = AppColors.primary
-      ..style = PaintingStyle.fill;
-    final trianglePath = Path()
-      ..moveTo(size.width * 0.55, size.height * 0.12)
-      ..lineTo(size.width * 0.55 - 10, size.height * 0.35)
-      ..lineTo(size.width * 0.55 + 10, size.height * 0.35)
-      ..close();
-    canvas.drawPath(trianglePath, trianglePaint);
-  }
-
-  void _drawDashedPath(
-    Canvas canvas,
-    Path path,
-    Paint paint,
-    double dashLen,
-    double gapLen,
-  ) {
-    final metrics = path.computeMetrics();
-    for (final metric in metrics) {
-      double distance = 0;
-      while (distance < metric.length) {
-        final start = distance;
-        final end = (distance + dashLen).clamp(0.0, metric.length);
-        canvas.drawPath(metric.extractPath(start, end), paint);
-        distance += dashLen + gapLen;
+      if (totalSteps > 2 * dailyGoal) {
+        final t3Start = t2Start + 2 * math.pi * t2Fraction;
+        if (t3Fraction > 0) {
+          paint.color = const Color(0xFF9C27B0);
+          canvas.drawArc(rect, t3Start, 2 * math.pi * t3Fraction, false, paint);
+        }
       }
     }
   }
 
   @override
-  bool shouldRepaint(_MapPatternPainter old) => old.isDark != isDark;
+  bool shouldRepaint(_SegmentedRingPainter oldDelegate) =>
+      oldDelegate.t1Fraction != t1Fraction ||
+      oldDelegate.t2Fraction != t2Fraction ||
+      oldDelegate.t3Fraction != t3Fraction ||
+      oldDelegate.totalSteps != totalSteps;
 }

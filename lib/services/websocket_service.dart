@@ -7,6 +7,7 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 import 'api_service.dart';
 import '../config/app_config.dart';
 import 'notification_service.dart';
+import 'notification_store.dart';
 
 class WebSocketService {
   WebSocketService._();
@@ -21,6 +22,10 @@ class WebSocketService {
   bool _initialized = false;
   bool _connecting = false;
   String? _userChannel;
+
+  final StreamController<Map<String, dynamic>> _eventController =
+      StreamController<Map<String, dynamic>>.broadcast();
+  Stream<Map<String, dynamic>> get eventStream => _eventController.stream;
 
   Future<void> initForAuthenticatedUser() async {
     if (_initialized || _connecting) return;
@@ -198,38 +203,40 @@ class WebSocketService {
     required Map<String, dynamic> payload,
   }) async {
 
+    _eventController.add({'event': eventName, 'payload': payload});
+
+    String type;
+    String title;
+    String body;
+
     switch (eventName) {
       case 'achievement_unlocked':
-        await NotificationService.showLocal(
-          title: 'Logro desbloqueado',
-          body: payload['achievement_name']?.toString() ?? 'Nuevo logro',
-        );
+        type = 'achievement';
+        title = 'Logro desbloqueado';
+        body = payload['achievement_name']?.toString() ?? 'Nuevo logro';
         break;
       case 'rank_changed':
+        type = 'rank';
         final newRank = payload['new_rank']?.toString() ?? '?';
-        await NotificationService.showLocal(
-          title: 'Tu ranking cambio',
-          body: 'Nuevo puesto: $newRank',
-        );
+        title = 'Tu ranking cambio';
+        body = 'Nuevo puesto: $newRank';
         break;
       case 'collectible_spawned':
-        await NotificationService.showLocal(
-          title: 'Nuevo coleccionable',
-          body:
-              payload['collectible_name']?.toString() ??
-              'Aparecio un nuevo item',
-        );
+        type = 'collectible';
+        title = 'Nuevo coleccionable';
+        body = payload['collectible_name']?.toString() ?? 'Aparecio un nuevo item';
         break;
       case 'new_mission_available':
-        await NotificationService.showLocal(
-          title: 'Nueva mision disponible',
-          body:
-              payload['mission_title']?.toString() ?? 'Revisa las misiones',
-        );
+        type = 'mission';
+        title = 'Nueva mision disponible';
+        body = payload['mission_title']?.toString() ?? 'Revisa las misiones';
         break;
       default:
         debugPrint('WS unhandled event: $eventName');
+        return;
     }
+
+    await NotificationService.showLocal(title: title, body: body, type: type);
   }
 
   Map<String, dynamic> _decodePayload(dynamic rawData) {

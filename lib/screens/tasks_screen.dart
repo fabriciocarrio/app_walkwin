@@ -6,6 +6,29 @@ import '../theme/app_theme.dart';
 class TasksScreen extends StatefulWidget {
   const TasksScreen({super.key});
 
+  static const typeMeta = {
+    'steps': {
+      'icon': Icons.directions_walk_rounded,
+      'label': 'Pasos',
+      'desc': 'Caminá y acumulá pasos para completar objetivos',
+      'color': Color(0xFF207AF5),
+    },
+    'exploration': {
+      'icon': Icons.explore_rounded,
+      'label': 'Exploración',
+      'desc': 'Visitá lugares y descubrí la ciudad',
+      'color': Color(0xFF20D4A4),
+    },
+    'collectible': {
+      'icon': Icons.collections_bookmark_rounded,
+      'label': 'Coleccionables',
+      'desc': 'Encontrá y coleccioná objetos especiales',
+      'color': Color(0xFFFF6B00),
+    },
+  };
+
+  static const typeOrder = ['steps', 'exploration', 'collectible'];
+
   @override
   State<TasksScreen> createState() => _TasksScreenState();
 }
@@ -52,6 +75,14 @@ class _TasksScreenState extends State<TasksScreen> {
     }
   }
 
+  Map<String, List<GeoMissionDto>> _groupByType() {
+    final grouped = <String, List<GeoMissionDto>>{};
+    for (final m in _missions) {
+      grouped.putIfAbsent(m.missionType, () => []).add(m);
+    }
+    return grouped;
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -65,6 +96,7 @@ class _TasksScreenState extends State<TasksScreen> {
         : AppColors.textSecondaryLight;
 
     final completedCount = _missions.where((m) => m.isCompleted).length;
+    final grouped = _groupByType();
 
     return Scaffold(
       backgroundColor: bg,
@@ -162,9 +194,9 @@ class _TasksScreenState extends State<TasksScreen> {
                             ],
                           ),
                         ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 24),
 
-                      // Missions list
+                      // Grouped by type
                       if (_missions.isEmpty)
                         Center(
                           child: Column(
@@ -184,18 +216,44 @@ class _TasksScreenState extends State<TasksScreen> {
                           ),
                         )
                       else
-                        ListView.separated(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: _missions.length,
-                          separatorBuilder: (_, __) =>
-                              const SizedBox(height: 12),
-                          itemBuilder: (_, idx) => _buildMissionCard(
-                            _missions[idx],
-                            card,
-                            textPrimary,
-                            textSecondary,
-                          ),
+                        ...TasksScreen.typeOrder.where((t) => grouped.containsKey(t)).map(
+                          (type) {
+                            final meta = TasksScreen.typeMeta[type]!;
+                            final typeMissions = grouped[type]!;
+                            final typeCompleted = typeMissions.where((m) => m.isCompleted).length;
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 24),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _TypeHeader(
+                                    icon: meta['icon'] as IconData,
+                                    label: meta['label'] as String,
+                                    description: meta['desc'] as String,
+                                    color: meta['color'] as Color,
+                                    completed: typeCompleted,
+                                    total: typeMissions.length,
+                                    isDark: isDark,
+                                    textPrimary: textPrimary,
+                                    textSecondary: textSecondary,
+                                  ),
+                                  const SizedBox(height: 12),
+                                  ...typeMissions.map(
+                                    (mission) => Padding(
+                                      padding: const EdgeInsets.only(bottom: 10),
+                                      child: _MissionCard(
+                                        mission: mission,
+                                        isDark: isDark,
+                                        textPrimary: textPrimary,
+                                        textSecondary: textSecondary,
+                                        cardColor: card,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
                         ),
                     ],
                   ),
@@ -205,12 +263,154 @@ class _TasksScreenState extends State<TasksScreen> {
     );
   }
 
-  Widget _buildMissionCard(
-    GeoMissionDto mission,
-    Color cardColor,
-    Color textPrimary,
-    Color textSecondary,
-  ) {
+  Widget _buildError(Color textPrimary, Color textSecondary) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.cloud_off_rounded,
+              size: 56,
+              color: AppColors.primary,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No se pudo cargar',
+              style: TextStyle(
+                color: textPrimary,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Verificá tu conexión e intentá de nuevo.',
+              style: TextStyle(color: textSecondary, fontSize: 13),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: _loadMissions,
+              child: const Text('Reintentar'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TypeHeader extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String description;
+  final Color color;
+  final int completed;
+  final int total;
+  final bool isDark;
+  final Color textPrimary;
+  final Color textSecondary;
+
+  const _TypeHeader({
+    required this.icon,
+    required this.label,
+    required this.description,
+    required this.color,
+    required this.completed,
+    required this.total,
+    required this.isDark,
+    required this.textPrimary,
+    required this.textSecondary,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: color.withAlpha(20),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(icon, color: color, size: 22),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  color: textPrimary,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                description,
+                style: TextStyle(color: textSecondary, fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(
+            color: color.withAlpha(20),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Text(
+            '$completed/$total',
+            style: TextStyle(
+              color: color,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _MissionCard extends StatelessWidget {
+  final GeoMissionDto mission;
+  final bool isDark;
+  final Color textPrimary;
+  final Color textSecondary;
+  final Color cardColor;
+
+  const _MissionCard({
+    required this.mission,
+    required this.isDark,
+    required this.textPrimary,
+    required this.textSecondary,
+    required this.cardColor,
+  });
+
+  Color get _typeColor {
+    final meta = TasksScreen.typeMeta[mission.missionType];
+    return meta?['color'] as Color? ?? AppColors.primary;
+  }
+
+  IconData get _typeIcon {
+    final meta = TasksScreen.typeMeta[mission.missionType];
+    return meta?['icon'] as IconData? ?? Icons.assignment_rounded;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final typeColor = _typeColor;
+    final progress = mission.targetCount > 0
+        ? (mission.currentProgress / mission.targetCount).clamp(0.0, 1.0)
+        : 0.0;
+
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -218,8 +418,10 @@ class _TasksScreenState extends State<TasksScreen> {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: mission.isCompleted
-              ? AppColors.primary.withAlpha(100)
-              : AppColors.dividerLight.withAlpha(80),
+              ? typeColor.withAlpha(100)
+              : isDark
+                  ? AppColors.dividerDark
+                  : AppColors.dividerLight.withAlpha(80),
         ),
       ),
       child: Column(
@@ -232,16 +434,14 @@ class _TasksScreenState extends State<TasksScreen> {
                 width: 36,
                 height: 36,
                 decoration: BoxDecoration(
-                  color: mission.isCompleted
-                      ? AppColors.primary.withAlpha(30)
-                      : AppColors.primary.withAlpha(15),
+                  color: typeColor.withAlpha(20),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
                   mission.isCompleted
                       ? Icons.check_rounded
-                      : Icons.assignment_rounded,
-                  color: AppColors.primary,
+                      : _typeIcon,
+                  color: typeColor,
                   size: 18,
                 ),
               ),
@@ -276,11 +476,34 @@ class _TasksScreenState extends State<TasksScreen> {
                 ),
               ),
               if (mission.isCompleted)
-                const Icon(
-                  Icons.check_circle_rounded,
-                  color: AppColors.primary,
-                  size: 20,
+                Icon(Icons.check_circle_rounded, color: typeColor, size: 20),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    minHeight: 7,
+                    backgroundColor: isDark
+                        ? AppColors.cardAltDark
+                        : const Color(0xFFE0E0E0),
+                    valueColor: AlwaysStoppedAnimation<Color>(typeColor),
+                  ),
                 ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '${mission.currentProgress}/${mission.targetCount}',
+                style: TextStyle(
+                  color: textPrimary,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ],
           ),
           if (mission.rewardCoins > 0 || mission.rewardXp > 0) ...[
@@ -293,7 +516,7 @@ class _TasksScreenState extends State<TasksScreen> {
                     vertical: 5,
                   ),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withAlpha(20),
+                    color: typeColor.withAlpha(20),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
@@ -346,44 +569,6 @@ class _TasksScreenState extends State<TasksScreen> {
             ),
           ],
         ],
-      ),
-    );
-  }
-
-  Widget _buildError(Color textPrimary, Color textSecondary) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.cloud_off_rounded,
-              size: 56,
-              color: AppColors.primary,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'No se pudo cargar',
-              style: TextStyle(
-                color: textPrimary,
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Verificá tu conexión e intentá de nuevo.',
-              style: TextStyle(color: textSecondary, fontSize: 13),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _loadMissions,
-              child: const Text('Reintentar'),
-            ),
-          ],
-        ),
       ),
     );
   }

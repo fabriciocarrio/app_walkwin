@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import '../theme/app_theme.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class LevelProgressScreen extends StatelessWidget {
   static const int _defaultMaxLevel = 30;
@@ -30,223 +30,231 @@ class LevelProgressScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark ? AppColors.bgDark : AppColors.bgLight;
-    final card = isDark ? AppColors.cardDark : AppColors.cardLight;
-    final textPrimary = isDark
-        ? AppColors.textPrimaryDark
-        : AppColors.textPrimaryLight;
-    final textSecondary = isDark
-        ? AppColors.textSecondaryDark
-        : AppColors.textSecondaryLight;
-
     final safeMaxLevel = maxLevel < 1 ? _defaultMaxLevel : maxLevel;
     final resolvedIsMaxLevel = isMaxLevel || level >= safeMaxLevel;
     final denominator = nextLevelXp - levelStartXp;
     final progress = resolvedIsMaxLevel || denominator <= 0
-      ? 1.0
-      : ((xpTotal - levelStartXp) / denominator).clamp(0.0, 1.0);
-    final xpMissing = resolvedIsMaxLevel ? 0 : (nextLevelXp - xpTotal).clamp(0, 999999);
+        ? 1.0
+        : ((xpTotal - levelStartXp) / denominator).clamp(0.0, 1.0);
 
     return Scaffold(
-      backgroundColor: bg,
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        backgroundColor: bg,
+        backgroundColor: Colors.transparent,
         elevation: 0,
-        title: const Text('Progresión de Niveles'),
+        iconTheme: const IconThemeData(color: Color(0xFF112A46)),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: AppColors.primary,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: _levelIllustration(level, size: 76),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          _tierLabel(level),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Nivel actual',
-                    style: TextStyle(color: Colors.white70, fontSize: 12),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Nivel $level',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 30,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    '$xpTotal XP acumulada',
-                    style: const TextStyle(color: Colors.white70, fontSize: 14),
-                  ),
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Background Gradient
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Color(0xFFF8FAFC),
+                  Color(0xFFE2F0FF),
+                  Color(0xFFD6F5F0),
+                  Color(0xFFFFFFFF),
                 ],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
               ),
             ),
-            const SizedBox(height: 18),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: card,
-                borderRadius: BorderRadius.circular(16),
-              ),
+          ),
+          // Background Image
+          Image.asset(
+            'assets/nivelesfondo.png',
+            fit: BoxFit.cover,
+            alignment: Alignment.bottomCenter,
+          ),
+          // Overlay to make the background lighter
+          Container(
+            color: Colors.white.withAlpha(140),
+          ),
+          // Content
+          SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Current Level Badge
+                  SizedBox(
+                    width: 140,
+                    height: 140,
+                    child: _levelIllustration(level),
+                  ),
+                  const SizedBox(height: 16),
                   Text(
-                    resolvedIsMaxLevel
-                        ? 'Nivel máximo alcanzado'
-                        : 'Progreso al nivel $nextLevel',
-                    style: TextStyle(
-                      color: textPrimary,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
+                    'Nivel $level',
+                    style: GoogleFonts.montserrat(
+                      color: const Color(0xFF112A46),
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
-                  const SizedBox(height: 10),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(6),
-                    child: LinearProgressIndicator(
-                      value: progress,
-                      minHeight: 8,
-                      backgroundColor: isDark
-                          ? AppColors.dividerDark
-                          : AppColors.dividerLight,
-                      color: AppColors.primary,
+                  Text(
+                    _tierLabel(level).toUpperCase(),
+                    style: GoogleFonts.montserrat(
+                      color: const Color(0xFF112A46),
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.0,
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  // Progress Bar
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      '$xpTotal / $nextLevelXp XP',
+                      style: GoogleFonts.montserrat(
+                        color: const Color(0xFF112A46),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 8),
-                  Text(
-                    resolvedIsMaxLevel
-                        ? 'Ya alcanzaste el nivel $safeMaxLevel'
-                        : 'Te faltan $xpMissing XP para subir',
-                    style: TextStyle(color: textSecondary, fontSize: 13),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: LinearProgressIndicator(
+                      value: progress,
+                      minHeight: 12,
+                      backgroundColor: const Color(0xFF1877F2).withAlpha(30),
+                      valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF1877F2)),
+                    ),
                   ),
+                  const SizedBox(height: 32),
+                  // Next Level Card
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withAlpha(230),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.white, width: 2),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withAlpha(10),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        SizedBox(
+                          width: 48,
+                          height: 48,
+                          child: _levelIllustration(nextLevel),
+                        ),
+                        const SizedBox(width: 16),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Próximo nivel',
+                              style: GoogleFonts.montserrat(
+                                color: const Color(0xFF3B4D63),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            Text(
+                              _tierLabel(nextLevel),
+                              style: GoogleFonts.montserrat(
+                                color: const Color(0xFF112A46),
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 40),
+                  // Achievements
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Logros recientes',
+                      style: GoogleFonts.montserrat(
+                        color: const Color(0xFF112A46),
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  _buildAchievementCard('7 días seguidos', '¡Racha completada!'),
+                  const SizedBox(height: 12),
+                  _buildAchievementCard('Primer canje', '¡Cupón usado!'),
+                  const SizedBox(height: 12),
+                  _buildAchievementCard('Explorador de barrios', 'Visitaste 10 comercios'),
+                  const SizedBox(height: 40),
                 ],
               ),
             ),
-            const SizedBox(height: 18),
-            if (!resolvedIsMaxLevel) ...[
-              Text(
-                'Próximos niveles',
-                style: TextStyle(
-                  color: textPrimary,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 10),
-              ..._buildUpcomingLevels(
-                card: card,
-                textPrimary: textPrimary,
-                textSecondary: textSecondary,
-                maxLevel: safeMaxLevel,
-              ),
-            ],
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  List<Widget> _buildUpcomingLevels({
-    required Color card,
-    required Color textPrimary,
-    required Color textSecondary,
-    required int maxLevel,
-  }) {
-    final widgets = <Widget>[];
-    int cursorLevel = level;
-    int cursorXp = levelStartXp;
-
-    while (cursorLevel < nextLevel) {
-      cursorLevel++;
-      cursorXp += levelBaseXp + ((cursorLevel - 1) * levelGrowthXp);
-    }
-
-    for (int i = 0; i < 5; i++) {
-      final targetLevel = nextLevel + i;
-      if (targetLevel > maxLevel) {
-        break;
-      }
-      if (i > 0) {
-        cursorXp += levelBaseXp + ((targetLevel - 1) * levelGrowthXp);
-      }
-
-      widgets.add(
-        Container(
-          margin: const EdgeInsets.only(bottom: 10),
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: card,
-            borderRadius: BorderRadius.circular(14),
+  Widget _buildAchievementCard(String title, String subtitle) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      decoration: BoxDecoration(
+        color: Colors.white.withAlpha(240),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(5),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
-          child: Row(
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: _levelIllustration(targetLevel, size: 56),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Nivel $targetLevel',
-                      style: TextStyle(
-                        color: textPrimary,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      _tierLabel(targetLevel),
-                      style: TextStyle(color: textSecondary, fontSize: 12),
-                    ),
-                    Text(
-                      'Requiere $cursorXp XP total',
-                      style: TextStyle(color: textSecondary, fontSize: 12),
-                    ),
-                  ],
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: const BoxDecoration(
+              color: Color(0xFF1877F2),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.star_rounded, color: Colors.white, size: 24),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.montserrat(
+                    color: const Color(0xFF112A46),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: GoogleFonts.montserrat(
+                    color: const Color(0xFF3B4D63),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-      );
-    }
-
-    return widgets;
+        ],
+      ),
+    );
   }
 
   Widget _levelIllustration(int targetLevel, {double size = 64}) {
@@ -255,7 +263,7 @@ class LevelProgressScreen extends StatelessWidget {
       assetPath,
       width: size,
       height: size,
-      fit: BoxFit.cover,
+      fit: BoxFit.contain,
     );
   }
 

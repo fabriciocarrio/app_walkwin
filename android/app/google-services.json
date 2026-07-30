@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "883809698181",
+    "project_id": "exploria-7834a",
+    "storage_bucket": "exploria-7834a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:883809698181:android:d4fcf31169212b951484ec",
+        "android_client_info": {
+          "package_name": "com.walkwin.walkwin_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCjUJ1X2__se88rYEl3iENQRScHMxvsJoQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

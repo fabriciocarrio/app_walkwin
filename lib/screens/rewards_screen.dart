@@ -3,6 +3,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import '../models/models.dart';
 import '../services/api_service.dart';
 import '../theme/app_theme.dart';
+import 'business_profile_screen.dart';
 
 class RewardsScreen extends StatefulWidget {
   const RewardsScreen({super.key});
@@ -27,13 +28,12 @@ class _RewardsScreenState extends State<RewardsScreen>
   bool _loading = true;
   String? _error;
 
-  // QuÃ© comercio estÃ¡ procesando compra de cupÃ³n
-  final Set<String> _purchasing = {};
+
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 2, vsync: this);
     _loadData();
   }
 
@@ -129,15 +129,7 @@ class _RewardsScreenState extends State<RewardsScreen>
                             textPrimary,
                             textSecondary,
                           ),
-                          // Tab 2: Mis QRs activos
-                          _buildRedemptionList(
-                            _pending,
-                            isDark,
-                            card,
-                            textPrimary,
-                            textSecondary,
-                            isPending: true,
-                          ),
+                          // Tab 2: Historial
                           // Tab 3: Historial
                           _buildRedemptionList(
                             _history,
@@ -181,7 +173,7 @@ class _RewardsScreenState extends State<RewardsScreen>
             ),
             const SizedBox(height: 8),
             Text(
-              'VerificÃ¡ tu conexiÃ³n e intentÃ¡ de nuevo.',
+              'Verificá tu conexión e intentá de nuevo.',
               style: TextStyle(color: textSecondary, fontSize: 13),
               textAlign: TextAlign.center,
             ),
@@ -198,115 +190,103 @@ class _RewardsScreenState extends State<RewardsScreen>
 
   // â”€â”€ Header con saldo â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   Widget _buildHeader(bool isDark) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: isDark
-            ? const LinearGradient(
-                colors: [Color(0xFF5E471A), Color(0xFF7A5A20)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              )
-            : const LinearGradient(
-                colors: [Color(0xFFFFD88A), Color(0xFFF7B94A)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withAlpha(isDark ? 35 : 120)),
-        boxShadow: [
-          BoxShadow(
-            color: (isDark ? Colors.black : const Color(0xFFE19A2F)).withAlpha(
-              isDark ? 40 : 70,
-            ),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Container(
-                width: 34,
-                height: 34,
-                decoration: BoxDecoration(
-                  color: Colors.white.withAlpha(170),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.emoji_events_rounded,
-                  size: 20,
-                  color: Color(0xFF7A4A00),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Text(
-                '$_peBalance',
-                style: const TextStyle(
-                  color: Color(0xFF3A2600),
-                  fontSize: 34,
-                  fontWeight: FontWeight.w900,
-                  height: 1,
-                ),
-              ),
-              const SizedBox(width: 8),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'PE',
-                    style: TextStyle(
-                      color: Color(0xFF6A4300),
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  const Text(
-                    'Puntos Exploria',
-                    style: TextStyle(
-                      color: Color(0xFF7A5210),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+                  const Text('Premios', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF0D1B2A))),
+                  const Text('Canjeá tus Puntos Exploria', style: TextStyle(fontSize: 14, color: Colors.black54)),
                 ],
               ),
+              const Icon(Icons.help_outline, color: Color(0xFF0D1B2A)),
             ],
           ),
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-            decoration: BoxDecoration(
-              color: Colors.white.withAlpha(38),
-              borderRadius: BorderRadius.circular(20),
+        ),
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+          height: 180,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            image: const DecorationImage(
+              image: AssetImage('assets/premios-hero.png'),
+              fit: BoxFit.cover,
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(
-                  Icons.local_fire_department_rounded,
-                  color: Color(0xFF6A4300),
-                  size: 16,
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 56,
+                      height: 56,
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.emoji_events, color: Color(0xFFEAA610), size: 36),
+                    ),
+                    const SizedBox(width: 16),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.baseline,
+                          textBaseline: TextBaseline.alphabetic,
+                          children: [
+                            Text(
+                              '$_peBalance',
+                              style: const TextStyle(fontSize: 42, fontWeight: FontWeight.bold, color: Color(0xFF1E1E1E), height: 1),
+                            ),
+                            const SizedBox(width: 8),
+                            const Text(
+                              'PE',
+                              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1E1E1E)),
+                            ),
+                          ],
+                        ),
+                        const Text(
+                          'Puntos Exploria',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Color(0xFF1E1E1E)),
+                        ),
+],
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 6),
-                Text(
-                  '$_streak dÃ­as de racha',
-                  style: const TextStyle(
-                    color: Color(0xFF5C3600),
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEAA610).withAlpha(120),
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.local_fire_department, color: Color(0xFF5C3600), size: 20),
+                      const SizedBox(width: 8),
+                      Text(
+                        '$_streak días de racha  >',
+                        style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF5C3600)),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -315,28 +295,47 @@ class _RewardsScreenState extends State<RewardsScreen>
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
       child: Container(
+        height: 50,
         decoration: BoxDecoration(
-          color: card,
-          borderRadius: BorderRadius.circular(14),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(25),
         ),
         child: TabBar(
           controller: _tabController,
           indicator: BoxDecoration(
-            color: AppColors.primary,
-            borderRadius: BorderRadius.circular(12),
+            color: const Color(0xFF1A67F8),
+            borderRadius: BorderRadius.circular(25),
           ),
           indicatorSize: TabBarIndicatorSize.tab,
           dividerColor: Colors.transparent,
           labelColor: Colors.white,
-          unselectedLabelColor: textSecondary,
+          unselectedLabelColor: Colors.grey.shade600,
           labelStyle: const TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 13,
+            fontWeight: FontWeight.bold,
+            fontSize: 12,
           ),
           tabs: [
-            const Tab(text: 'Ofertas'),
-            Tab(text: 'Mis QRs (${_pending.length})'),
-            Tab(text: 'Historial'),
+            Tab(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: const [
+                  Icon(Icons.local_offer_rounded, size: 14),
+                  SizedBox(width: 4),
+                  Text('Ofertas'),
+                ],
+              ),
+            ),
+
+            Tab(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: const [
+                  Icon(Icons.history_rounded, size: 14),
+                  SizedBox(width: 4),
+                  Text('Historial'),
+                ],
+              ),
+            ),
           ],
         ),
       ),
@@ -375,7 +374,7 @@ class _RewardsScreenState extends State<RewardsScreen>
               ),
               const SizedBox(height: 8),
               Text(
-                'Los comercios participantes\naparecerÃ¡n acÃ¡.',
+                'Los comercios participantes\naparecerán acá.',
                 style: TextStyle(
                   color: textSecondary,
                   fontSize: 13,
@@ -389,11 +388,88 @@ class _RewardsScreenState extends State<RewardsScreen>
       );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-      itemCount: _offers.length,
-      itemBuilder: (_, i) =>
-          _buildOfferCard(_offers[i], isDark, card, textPrimary, textSecondary),
+    final featured = _offers.where((b) => b.isFeatured).toList();
+    final regular = _offers.where((b) => !b.isFeatured).toList();
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+      children: [
+        if (featured.isNotEmpty) ...[
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Ofertas destacadas',
+                style: TextStyle(
+                  color: textPrimary,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const Text(
+                'Ver todas >',
+                style: TextStyle(
+                  color: Color(0xFF1A67F8),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ...featured.map((b) => _buildOfferCard(b, isDark, card, textPrimary, textSecondary)),
+          const SizedBox(height: 16),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Stack(
+              children: [
+                Image.asset(
+                  'assets/premios-banner.png', 
+                  fit: BoxFit.cover, 
+                  width: double.infinity, 
+                  height: 110,
+                  alignment: Alignment.centerRight,
+                ),
+                Positioned.fill(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: FittedBox(
+                      alignment: Alignment.centerLeft,
+                      fit: BoxFit.scaleDown,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text(
+                            '¡Nuevas ofertas cada semana!',
+                            style: TextStyle(
+                              color: Color(0xFF1E293B), // Dark slate blue color
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Seguí explorando y sumando\nPuntos Exploria para canjear.',
+                            style: TextStyle(
+                              color: const Color(0xFF1E293B).withAlpha(200),
+                              fontSize: 12,
+                              height: 1.3,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+        ],
+        ...regular.map((b) => _buildOfferCard(b, isDark, card, textPrimary, textSecondary)),
+      ],
     );
   }
 
@@ -405,13 +481,12 @@ class _RewardsScreenState extends State<RewardsScreen>
     Color textSecondary,
   ) {
     final canAfford = _peBalance >= business.offerCost;
-    final isPurchasing = _purchasing.contains(business.id);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: card,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withAlpha(isDark ? 40 : 12),
@@ -420,239 +495,229 @@ class _RewardsScreenState extends State<RewardsScreen>
           ),
         ],
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // â”€â”€ Imagen del local â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-            if (business.imageUrl != null)
-              SizedBox(
-                height: 130,
-                width: double.infinity,
-                child: Image.network(
-                  business.imageUrl!,
-                  fit: BoxFit.cover,
-                  loadingBuilder: (_, child, progress) => progress == null
-                      ? child
-                      : Container(
-                          color: AppColors.primary.withAlpha(15),
-                          child: const Center(
-                            child: CircularProgressIndicator(
-                              color: AppColors.primary,
-                              strokeWidth: 2,
-                            ),
-                          ),
-                        ),
-                  errorBuilder: (_, __, ___) => Container(
-                    height: 130,
-                    color: AppColors.primary.withAlpha(15),
-                    child: const Center(
-                      child: Icon(
-                        Icons.store_mall_directory_rounded,
-                        color: AppColors.primary,
-                        size: 36,
-                      ),
+      height: 140,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Col 1: Foto
+          SizedBox(
+            width: 120,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                ClipRRect(
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(16),
+                    bottomLeft: Radius.circular(16),
+                  ),
+                  child: business.imageUrl != null
+                      ? Image.network(
+                          business.imageUrl!,
+                          fit: BoxFit.cover,
+                        )
+                      : Container(color: Colors.grey.shade300),
+                ),
+                Positioned(
+                  bottom: 8,
+                  left: 8,
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    padding: const EdgeInsets.all(3),
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(20),
+                      child: business.imageUrl != null
+                          ? Image.network(
+                              business.imageUrl!,
+                              fit: BoxFit.cover,
+                            )
+                          : const Icon(Icons.store, color: Colors.grey, size: 20),
                     ),
                   ),
                 ),
-              )
-            else
-              Container(
-                height: 80,
-                width: double.infinity,
-                color: AppColors.primary.withAlpha(12),
-                child: const Center(
-                  child: Icon(
-                    Icons.store_mall_directory_rounded,
-                    color: AppColors.primary,
-                    size: 36,
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withAlpha(160),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.emoji_events, color: Color(0xFF4CAF50), size: 12),
+                        const SizedBox(width: 2),
+                        Text(
+                          '${business.offerCost} PE',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
+              ],
+            ),
+          ),
 
-            // â”€â”€ Contenido â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-            Padding(
-              padding: const EdgeInsets.all(14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    business.name,
-                    style: TextStyle(
-                      color: textPrimary,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
+          // Col 2: Info + Botón
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Fila 1: Info
+                Expanded(
+                  child: InkWell(
+                    borderRadius: const BorderRadius.only(
+                      topRight: Radius.circular(16),
                     ),
-                  ),
-                  const SizedBox(height: 6),
-                  // Oferta
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.local_offer_rounded,
-                        color: AppColors.primary,
-                        size: 15,
-                      ),
-                      const SizedBox(width: 5),
-                      Expanded(
-                        child: Text(
-                          business.offer!,
-                          style: TextStyle(color: textSecondary, fontSize: 13),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              BusinessProfileScreen(business: business),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      // Costo en PE
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 5,
-                        ),
-                        decoration: BoxDecoration(
-                            color: canAfford
-                              ? const Color(0xFFF5D06F).withAlpha(35)
-                              : Colors.red.withAlpha(20),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
+                      );
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: SingleChildScrollView(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(
-                              Icons.emoji_events_rounded,
-                              color: canAfford
-                                  ? AppColors.primaryLight
-                                  : Colors.red.shade400,
-                              size: 14,
+                          Text(
+                            business.name,
+                            style: TextStyle(
+                              color: textPrimary,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
                             ),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${business.offerCost} PE',
-                              style: TextStyle(
-                                color: canAfford
-                                    ? AppColors.primaryLight
-                                    : Colors.red.shade400,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const Spacer(),
-                      // BotÃ³n canjear
-                      SizedBox(
-                        height: 38,
-                        child: ElevatedButton(
-                          onPressed: (canAfford && !isPurchasing)
-                              ? () => _purchaseCoupon(business)
-                              : null,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: canAfford
-                                ? AppColors.primary
-                                : Colors.grey.shade400,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          child: isPurchasing
-                              ? const SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Colors.white,
+                          const SizedBox(height: 6),
+                          Row(
+                            children: [
+                              Icon(Icons.local_offer,
+                                  size: 13, color: Colors.blue.shade400),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  business.offer ?? 'Oferta especial',
+                                  style: TextStyle(
+                                    color: textSecondary,
+                                    fontSize: 11,
                                   ),
-                                )
-                              : Text(
-                                  canAfford ? 'Canjear' : 'PE insuficientes',
-                                  style: const TextStyle(
-                                    fontSize: 13,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Icon(Icons.location_on,
+                                  size: 13, color: Colors.grey.shade600),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  'San Juan',
+                                  style: TextStyle(
+                                    color: textSecondary,
+                                    fontSize: 11,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.blue.shade50,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.schedule,
+                                    size: 11, color: Colors.blue.shade600),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Válido hasta 30/06/2025',
+                                  style: TextStyle(
+                                    color: Colors.blue.shade700,
+                                    fontSize: 10,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                ),
+                // Fila 2: Botón Canjear
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      SizedBox(
+                        height: 34,
+                        child: ElevatedButton(
+                          onPressed: canAfford
+                              ? () => _showRedeemSheet(business)
+                              : null,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: canAfford
+                                ? const Color(0xFF1A67F8)
+                                : Colors.grey,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: Text(
+                            canAfford ? 'Canjear' : 'PE inf.',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         ),
                       ),
                     ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
-  }
-
-  Future<void> _purchaseCoupon(Business business) async {
-    setState(() => _purchasing.add(business.id));
-    try {
-      final result = await ApiService.purchaseCoupon(
-        business.id,
-        currency: 'pe',
-      );
-      if (!mounted) return;
-
-      if (result['id'] != null) {
-        // Ã‰xito
-        final newBalance =
-            result['new_balance'] ?? (_peBalance - business.offerCost);
-        setState(() {
-          _peBalance = newBalance;
-          // Agregar a redemptions localmente para que aparezca en "Mis QRs"
-          _redemptions.insert(
-            0,
-            Redemption.fromJson({...result, 'status': 'pending'}),
-          );
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Â¡CupÃ³n obtenido! MostrÃ¡ el QR en ${business.name}.',
-            ),
-            backgroundColor: AppColors.primary,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-        );
-        // Ir al tab "Mis QRs"
-        _tabController.animateTo(1);
-      } else {
-        final msg = result['error'] ?? 'Error al canjear.';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(msg),
-            backgroundColor: Colors.orange.shade700,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Error de conexiÃ³n.'),
-            backgroundColor: Colors.red.shade700,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _purchasing.remove(business.id));
-    }
   }
 
   // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -680,7 +745,7 @@ class _RewardsScreenState extends State<RewardsScreen>
               ),
               const SizedBox(height: 16),
               Text(
-                isPending ? 'No tenÃ©s QRs activos' : 'Sin historial todavÃ­a',
+                isPending ? 'No tenés QRs activos' : 'Sin historial todavía',
                 style: TextStyle(
                   color: textPrimary,
                   fontSize: 16,
@@ -690,8 +755,8 @@ class _RewardsScreenState extends State<RewardsScreen>
               const SizedBox(height: 8),
               Text(
                 isPending
-                    ? 'CanjeÃ¡ una oferta en la pestaÃ±a\n"Ofertas" para obtener tu QR.'
-                    : 'Los canjes validados o expirados\naparecerÃ¡n acÃ¡.',
+                    ? 'Canjeá una oferta en la pestaña\n"Ofertas" para obtener tu QR.'
+                    : 'Los canjes validados o expirados\naparecerán acá.',
                 style: TextStyle(
                   color: textSecondary,
                   fontSize: 13,
@@ -765,7 +830,7 @@ class _RewardsScreenState extends State<RewardsScreen>
           children: [
             Row(
               children: [
-                // Imagen pequeÃ±a o Ã­cono
+                // Imagen pequeña o ícono
                 ClipRRect(
                   borderRadius: BorderRadius.circular(10),
                   child: r.businessImage != null
@@ -888,7 +953,7 @@ class _RewardsScreenState extends State<RewardsScreen>
               const SizedBox(height: 8),
               Center(
                 child: Text(
-                  'TocÃ¡ para ampliar Â· Mostralo en el comercio',
+                  'Tocá para ampliar · Mostralo en el comercio',
                   style: TextStyle(color: textSecondary, fontSize: 12),
                 ),
               ),
@@ -986,7 +1051,7 @@ class _RewardsScreenState extends State<RewardsScreen>
             ],
             const SizedBox(height: 8),
             Text(
-              'MostrÃ¡ este QR en el comercio para canjear el premio',
+              'Mostrá este QR en el comercio para canjear el premio',
               style: TextStyle(color: textSecondary, fontSize: 13),
               textAlign: TextAlign.center,
             ),
@@ -995,5 +1060,177 @@ class _RewardsScreenState extends State<RewardsScreen>
         ),
       ),
     );
+  }
+
+  void _showRedeemSheet(Business business) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = isDark
+        ? AppColors.textPrimaryDark
+        : AppColors.textPrimaryLight;
+    final textSecondary = isDark
+        ? AppColors.textSecondaryDark
+        : AppColors.textSecondaryLight;
+
+    final codeController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: isDark ? AppColors.cardDark : AppColors.cardLight,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            return Padding(
+              padding: EdgeInsets.fromLTRB(
+                24,
+                16,
+                24,
+                MediaQuery.of(ctx).viewInsets.bottom + 24,
+              ),
+              child: Form(
+                key: formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      'Canjeá tu premio',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Ingresá el código de 5 dígitos\nque te dio ${business.name}',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: textSecondary, fontSize: 14),
+                    ),
+                    const SizedBox(height: 24),
+                    TextFormField(
+                      controller: codeController,
+                      maxLength: 5,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 28,
+                        letterSpacing: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        counterText: '',
+                        hintText: '0 0 0 0 0',
+                        hintStyle: TextStyle(
+                          color: Colors.grey.shade300,
+                          letterSpacing: 12,
+                        ),
+                        filled: true,
+                        fillColor: Colors.grey.shade100,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                        contentPadding:
+                            const EdgeInsets.symmetric(vertical: 16),
+                      ),
+                      validator: (v) {
+                        if (v == null || v.length != 5) {
+                          return 'Ingresá el código completo';
+                        }
+                        if (!RegExp(r'^\d{5}$').hasMatch(v)) {
+                          return 'Solo números';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          if (!formKey.currentState!.validate()) return;
+                          setSheetState(() {});
+                          try {
+                            final result = await ApiService.redeemWithCode(
+                              business.id,
+                              codeController.text.trim(),
+                            );
+                            if (!ctx.mounted) return;
+                            Navigator.pop(ctx);
+                            if (!mounted) return;
+                            _handleRedeemSuccess(result, business);
+                          } catch (e) {
+                            if (ctx.mounted) {
+                              ScaffoldMessenger.of(ctx).showSnackBar(
+                                SnackBar(
+                                  content: Text(e.toString()),
+                                  backgroundColor: Colors.red.shade700,
+                                  behavior: SnackBarBehavior.floating,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                              );
+                            }
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF1A67F8),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          'Canjear',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _handleRedeemSuccess(
+      Map<String, dynamic> result, Business business) {
+    final newBalance = result['new_balance'] ?? _peBalance;
+    setState(() {
+      _peBalance = newBalance is int ? newBalance : _peBalance;
+      _redemptions.insert(0, Redemption.fromJson(result));
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('¡Premio canjeado en ${business.name}!'),
+        backgroundColor: const Color(0xFF4A9955),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+    );
+    _tabController.animateTo(1);
   }
 }

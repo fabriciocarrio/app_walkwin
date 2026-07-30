@@ -28,8 +28,6 @@ class _RewardsScreenState extends State<RewardsScreen>
   bool _loading = true;
   String? _error;
 
-
-
   @override
   void initState() {
     super.initState();
@@ -201,8 +199,18 @@ class _RewardsScreenState extends State<RewardsScreen>
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Premios', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF0D1B2A))),
-                  const Text('Canjeá tus Puntos Exploria', style: TextStyle(fontSize: 14, color: Colors.black54)),
+                  const Text(
+                    'Premios',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF0D1B2A),
+                    ),
+                  ),
+                  const Text(
+                    'Canjeá tus Puntos Exploria',
+                    style: TextStyle(fontSize: 14, color: Colors.black54),
+                  ),
                 ],
               ),
               const Icon(Icons.help_outline, color: Color(0xFF0D1B2A)),
@@ -234,7 +242,11 @@ class _RewardsScreenState extends State<RewardsScreen>
                         color: Colors.white,
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.emoji_events, color: Color(0xFFEAA610), size: 36),
+                      child: const Icon(
+                        Icons.emoji_events,
+                        color: Color(0xFFEAA610),
+                        size: 36,
+                      ),
                     ),
                     const SizedBox(width: 16),
                     Column(
@@ -246,26 +258,42 @@ class _RewardsScreenState extends State<RewardsScreen>
                           children: [
                             Text(
                               '$_peBalance',
-                              style: const TextStyle(fontSize: 42, fontWeight: FontWeight.bold, color: Color(0xFF1E1E1E), height: 1),
+                              style: const TextStyle(
+                                fontSize: 42,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF1E1E1E),
+                                height: 1,
+                              ),
                             ),
                             const SizedBox(width: 8),
                             const Text(
                               'PE',
-                              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1E1E1E)),
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF1E1E1E),
+                              ),
                             ),
                           ],
                         ),
                         const Text(
                           'Puntos Exploria',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Color(0xFF1E1E1E)),
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                            color: Color(0xFF1E1E1E),
+                          ),
                         ),
-],
+                      ],
                     ),
                   ],
                 ),
                 const Spacer(),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFEAA610).withAlpha(120),
                     borderRadius: BorderRadius.circular(24),
@@ -273,11 +301,18 @@ class _RewardsScreenState extends State<RewardsScreen>
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.local_fire_department, color: Color(0xFF5C3600), size: 20),
+                      const Icon(
+                        Icons.local_fire_department,
+                        color: Color(0xFF5C3600),
+                        size: 20,
+                      ),
                       const SizedBox(width: 8),
                       Text(
                         '$_streak días de racha  >',
-                        style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF5C3600)),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF5C3600),
+                        ),
                       ),
                     ],
                   ),
@@ -417,22 +452,27 @@ class _RewardsScreenState extends State<RewardsScreen>
             ],
           ),
           const SizedBox(height: 16),
-          ...featured.map((b) => _buildOfferCard(b, isDark, card, textPrimary, textSecondary)),
+          ...featured.map(
+            (b) => _buildOfferCard(b, isDark, card, textPrimary, textSecondary),
+          ),
           const SizedBox(height: 16),
           ClipRRect(
             borderRadius: BorderRadius.circular(16),
             child: Stack(
               children: [
                 Image.asset(
-                  'assets/premios-banner.png', 
-                  fit: BoxFit.cover, 
-                  width: double.infinity, 
+                  'assets/premios-banner.png',
+                  fit: BoxFit.cover,
+                  width: double.infinity,
                   height: 110,
                   alignment: Alignment.centerRight,
                 ),
                 Positioned.fill(
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
                     child: FittedBox(
                       alignment: Alignment.centerLeft,
                       fit: BoxFit.scaleDown,
@@ -468,7 +508,9 @@ class _RewardsScreenState extends State<RewardsScreen>
           ),
           const SizedBox(height: 24),
         ],
-        ...regular.map((b) => _buildOfferCard(b, isDark, card, textPrimary, textSecondary)),
+        ...regular.map(
+          (b) => _buildOfferCard(b, isDark, card, textPrimary, textSecondary),
+        ),
       ],
     );
   }
@@ -511,10 +553,7 @@ class _RewardsScreenState extends State<RewardsScreen>
                     bottomLeft: Radius.circular(16),
                   ),
                   child: business.imageUrl != null
-                      ? Image.network(
-                          business.imageUrl!,
-                          fit: BoxFit.cover,
-                        )
+                      ? Image.network(business.imageUrl!, fit: BoxFit.cover)
                       : Container(color: Colors.grey.shade300),
                 ),
                 Positioned(
@@ -531,11 +570,12 @@ class _RewardsScreenState extends State<RewardsScreen>
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(20),
                       child: business.imageUrl != null
-                          ? Image.network(
-                              business.imageUrl!,
-                              fit: BoxFit.cover,
-                            )
-                          : const Icon(Icons.store, color: Colors.grey, size: 20),
+                          ? Image.network(business.imageUrl!, fit: BoxFit.cover)
+                          : const Icon(
+                              Icons.store,
+                              color: Colors.grey,
+                              size: 20,
+                            ),
                     ),
                   ),
                 ),
@@ -543,7 +583,10 @@ class _RewardsScreenState extends State<RewardsScreen>
                   top: 8,
                   right: 8,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 3,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.black.withAlpha(160),
                       borderRadius: BorderRadius.circular(8),
@@ -551,7 +594,11 @@ class _RewardsScreenState extends State<RewardsScreen>
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.emoji_events, color: Color(0xFF4CAF50), size: 12),
+                        const Icon(
+                          Icons.emoji_events,
+                          color: Color(0xFF4CAF50),
+                          size: 12,
+                        ),
                         const SizedBox(width: 2),
                         Text(
                           '${business.offerCost} PE',
@@ -595,86 +642,95 @@ class _RewardsScreenState extends State<RewardsScreen>
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                          Text(
-                            business.name,
-                            style: TextStyle(
-                              color: textPrimary,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 6),
-                          Row(
-                            children: [
-                              Icon(Icons.local_offer,
-                                  size: 13, color: Colors.blue.shade400),
-                              const SizedBox(width: 4),
-                              Expanded(
-                                child: Text(
-                                  business.offer ?? 'Oferta especial',
-                                  style: TextStyle(
-                                    color: textSecondary,
-                                    fontSize: 11,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
+                            Text(
+                              business.name,
+                              style: TextStyle(
+                                color: textPrimary,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
                               ),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          Row(
-                            children: [
-                              Icon(Icons.location_on,
-                                  size: 13, color: Colors.grey.shade600),
-                              const SizedBox(width: 4),
-                              Expanded(
-                                child: Text(
-                                  'San Juan',
-                                  style: TextStyle(
-                                    color: textSecondary,
-                                    fontSize: 11,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 3,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            decoration: BoxDecoration(
-                              color: Colors.blue.shade50,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
+                            const SizedBox(height: 6),
+                            Row(
                               children: [
-                                Icon(Icons.schedule,
-                                    size: 11, color: Colors.blue.shade600),
+                                Icon(
+                                  Icons.local_offer,
+                                  size: 13,
+                                  color: Colors.blue.shade400,
+                                ),
                                 const SizedBox(width: 4),
-                                Text(
-                                  'Válido hasta 30/06/2025',
-                                  style: TextStyle(
-                                    color: Colors.blue.shade700,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w600,
+                                Expanded(
+                                  child: Text(
+                                    business.offer ?? 'Oferta especial',
+                                    style: TextStyle(
+                                      color: textSecondary,
+                                      fontSize: 11,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
                               ],
                             ),
-                          ),
-                        ],
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.location_on,
+                                  size: 13,
+                                  color: Colors.grey.shade600,
+                                ),
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: Text(
+                                    'San Juan',
+                                    style: TextStyle(
+                                      color: textSecondary,
+                                      fontSize: 11,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.blue.shade50,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.schedule,
+                                    size: 11,
+                                    color: Colors.blue.shade600,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Válido hasta 30/06/2025',
+                                    style: TextStyle(
+                                      color: Colors.blue.shade700,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
                 ),
                 // Fila 2: Botón Canjear
                 Padding(
@@ -693,9 +749,7 @@ class _RewardsScreenState extends State<RewardsScreen>
                                 ? const Color(0xFF1A67F8)
                                 : Colors.grey,
                             foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
                             ),
@@ -1143,8 +1197,9 @@ class _RewardsScreenState extends State<RewardsScreen>
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide.none,
                         ),
-                        contentPadding:
-                            const EdgeInsets.symmetric(vertical: 16),
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 16,
+                        ),
                       ),
                       validator: (v) {
                         if (v == null || v.length != 5) {
@@ -1214,8 +1269,7 @@ class _RewardsScreenState extends State<RewardsScreen>
     );
   }
 
-  void _handleRedeemSuccess(
-      Map<String, dynamic> result, Business business) {
+  void _handleRedeemSuccess(Map<String, dynamic> result, Business business) {
     final newBalance = result['new_balance'] ?? _peBalance;
     setState(() {
       _peBalance = newBalance is int ? newBalance : _peBalance;
@@ -1226,9 +1280,7 @@ class _RewardsScreenState extends State<RewardsScreen>
         content: Text('¡Premio canjeado en ${business.name}!'),
         backgroundColor: const Color(0xFF4A9955),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
     _tabController.animateTo(1);

@@ -21,51 +21,47 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = isDark ? AppColors.bgDark : const Color(0xFFF8FAFC); // Very light blue/gray background
-    
-    // We'll use specific colors matching the image for light mode, 
-    // but keep dark mode fallbacks just in case.
-    final titleColor = isDark ? AppColors.textPrimaryDark : const Color(0xFF112A46);
-    final subtitleColor = isDark ? AppColors.textSecondaryDark : const Color(0xFF3B4D63);
-    final labelColor = isDark ? AppColors.textPrimaryDark : const Color(0xFF112A46);
+    final bg = isDark ? AppColors.bgDark : const Color(0xFFF8FAFC);
 
-    return Scaffold(
-      backgroundColor: bg,
-      body: Stack(
-        children: [
-          // Background Image with Fade
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            height: MediaQuery.of(context).size.height * 0.45,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                Image.asset(
-                  'assets/loginfondo.png',
-                  fit: BoxFit.cover,
-                  alignment: Alignment.bottomCenter,
-                ),
-                Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        bg,
-                        bg.withAlpha(200),
-                        bg.withAlpha(0),
-                      ],
-                      stops: const [0.0, 0.4, 1.0],
-                    ),
+    final titleColor = isDark
+        ? AppColors.textPrimaryDark
+        : const Color(0xFF112A46);
+    final subtitleColor = isDark
+        ? AppColors.textSecondaryDark
+        : const Color(0xFF3B4D63);
+    final labelColor = isDark
+        ? AppColors.textPrimaryDark
+        : const Color(0xFF112A46);
+
+    return Stack(
+      children: [
+        // Background Image with Fade
+        Positioned.fill(
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Image.asset(
+                'assets/loginfondo.png',
+                fit: BoxFit.cover,
+                alignment: Alignment.bottomCenter,
+              ),
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [bg, bg.withAlpha(200), bg.withAlpha(0)],
+                    stops: const [0.0, 0.75, 1.0],
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-          // Foreground Content
-          SafeArea(
+        ),
+        // Foreground Content
+        Scaffold(
+          backgroundColor: Colors.transparent,
+          body: SafeArea(
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 32),
               child: Form(
@@ -74,12 +70,12 @@ class _LoginScreenState extends State<LoginScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     const SizedBox(height: 60),
-                    
+
                     // Logo EXPLORIA
                     Center(child: _buildLogo()),
-                    
+
                     const SizedBox(height: 40),
-                    
+
                     // Title
                     Text(
                       '¡Bienvenido!',
@@ -91,7 +87,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    
+
                     // Subtitle
                     Text(
                       'Iniciá sesión para\nseguir explorando.',
@@ -103,9 +99,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         height: 1.4,
                       ),
                     ),
-                    
+
                     const SizedBox(height: 48),
-                    
+
                     // Fields
                     _buildLabel('Email', labelColor),
                     const SizedBox(height: 8),
@@ -115,9 +111,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       keyboardType: TextInputType.emailAddress,
                       isDark: isDark,
                     ),
-                    
+
                     const SizedBox(height: 24),
-                    
+
                     _buildLabel('Contraseña', labelColor),
                     const SizedBox(height: 8),
                     _buildField(
@@ -133,13 +129,14 @@ class _LoginScreenState extends State<LoginScreen> {
                           color: subtitleColor,
                           size: 22,
                         ),
-                        onPressed: () =>
-                            setState(() => _obscurePassword = !_obscurePassword),
+                        onPressed: () => setState(
+                          () => _obscurePassword = !_obscurePassword,
+                        ),
                       ),
                     ),
-                    
+
                     const SizedBox(height: 12),
-                    
+
                     // Forgot Password
                     Align(
                       alignment: Alignment.centerRight,
@@ -157,9 +154,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                     ),
-                    
+
                     const SizedBox(height: 32),
-                    
+
                     // Login Button
                     SizedBox(
                       width: double.infinity,
@@ -167,7 +164,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: ElevatedButton(
                         onPressed: _loading ? null : _login,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF1877F2), // Bright blue
+                          backgroundColor: const Color(
+                            0xFF1877F2,
+                          ), // Bright blue
                           foregroundColor: Colors.white,
                           elevation: 0,
                           shape: RoundedRectangleBorder(
@@ -192,9 +191,9 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                       ),
                     ),
-                    
+
                     const SizedBox(height: 48),
-                    
+
                     // Register Link
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -208,7 +207,8 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                         GestureDetector(
-                          onTap: () => Navigator.pushNamed(context, '/register'),
+                          onTap: () =>
+                              Navigator.pushNamed(context, '/register'),
                           child: Text(
                             'Registrarme',
                             style: GoogleFonts.montserrat(
@@ -226,8 +226,8 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -279,8 +279,8 @@ class _LoginScreenState extends State<LoginScreen> {
     return Text(
       text,
       style: GoogleFonts.montserrat(
-        color: color, 
-        fontSize: 14, 
+        color: color,
+        fontSize: 14,
         fontWeight: FontWeight.w700,
       ),
     );
@@ -295,9 +295,13 @@ class _LoginScreenState extends State<LoginScreen> {
     Widget? suffix,
   }) {
     final card = isDark ? AppColors.cardDark : Colors.white;
-    final textPrimary = isDark ? AppColors.textPrimaryDark : const Color(0xFF112A46);
+    final textPrimary = isDark
+        ? AppColors.textPrimaryDark
+        : const Color(0xFF112A46);
     final borderColor = isDark ? Colors.transparent : const Color(0xFFE2E8F0);
-    final hintColor = isDark ? AppColors.textSecondaryDark : const Color(0xFF64748B);
+    final hintColor = isDark
+        ? AppColors.textSecondaryDark
+        : const Color(0xFF64748B);
 
     return TextFormField(
       controller: controller,
@@ -315,7 +319,10 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         filled: true,
         fillColor: card,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 20,
+          vertical: 18,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: borderColor),

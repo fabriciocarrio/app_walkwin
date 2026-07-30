@@ -118,10 +118,7 @@ class ApiService {
 
   static Future<Map<String, dynamic>> getStats() async {
     final response = await http
-        .get(
-          Uri.parse('$baseUrl/user/stats'),
-          headers: _headers,
-        )
+        .get(Uri.parse('$baseUrl/user/stats'), headers: _headers)
         .timeout(const Duration(seconds: 15));
     return jsonDecode(response.body);
   }
@@ -342,7 +339,8 @@ class ApiService {
     final data = jsonDecode(response.body) as Map<String, dynamic>;
     if (response.statusCode >= 400) {
       throw ApiException(
-        (data['error'] ?? data['message'] ?? 'Error al canjear con código.').toString(),
+        (data['error'] ?? data['message'] ?? 'Error al canjear con código.')
+            .toString(),
         response.statusCode,
       );
     }
@@ -485,14 +483,14 @@ class ApiService {
     final response = await http.post(
       Uri.parse('$baseUrl/exploration/collectibles/fuse'),
       headers: _headers,
-      body: jsonEncode({
-        'collectible_id': collectibleId,
-      }),
+      body: jsonEncode({'collectible_id': collectibleId}),
     );
     return jsonDecode(response.body);
   }
 
-  static Future<Map<String, dynamic>> getCollectibleDetail(int collectibleId) async {
+  static Future<Map<String, dynamic>> getCollectibleDetail(
+    int collectibleId,
+  ) async {
     final response = await http.get(
       Uri.parse('$baseUrl/exploration/collectibles/$collectibleId'),
       headers: _headers,
@@ -539,6 +537,7 @@ class ApiService {
   static Future<Map<String, dynamic>> claimMissionReward({
     required String missionId,
   }) async {
+    await getToken();
     final response = await http.post(
       Uri.parse('$baseUrl/exploration/missions/$missionId/claim'),
       headers: _headers,
@@ -593,8 +592,11 @@ class ApiService {
     await getToken();
     final query = <String, String>{};
     if (search != null && search.isNotEmpty) query['search'] = search;
-    if (department != null && department.isNotEmpty) query['department'] = department;
-    final uri = Uri.parse('$baseUrl/clans').replace(queryParameters: query.isEmpty ? null : query);
+    if (department != null && department.isNotEmpty)
+      query['department'] = department;
+    final uri = Uri.parse(
+      '$baseUrl/clans',
+    ).replace(queryParameters: query.isEmpty ? null : query);
     final response = await http.get(uri, headers: _headers);
     final data = jsonDecode(response.body);
     return data is List ? data : (data['data'] is List ? data['data'] : []);
@@ -689,7 +691,10 @@ class ApiService {
     return jsonDecode(response.body);
   }
 
-  static Future<Map<String, dynamic>> transferLeadership(int clanId, int userId) async {
+  static Future<Map<String, dynamic>> transferLeadership(
+    int clanId,
+    int userId,
+  ) async {
     await getToken();
     final response = await http.post(
       Uri.parse('$baseUrl/clans/$clanId/transfer'),
@@ -708,11 +713,16 @@ class ApiService {
     return jsonDecode(response.body);
   }
 
-  static Future<Map<String, dynamic>> getDepartmentRankings({String? department}) async {
+  static Future<Map<String, dynamic>> getDepartmentRankings({
+    String? department,
+  }) async {
     await getToken();
     final query = <String, String>{};
-    if (department != null && department.isNotEmpty) query['department'] = department;
-    final uri = Uri.parse('$baseUrl/rankings/departments').replace(queryParameters: query.isEmpty ? null : query);
+    if (department != null && department.isNotEmpty)
+      query['department'] = department;
+    final uri = Uri.parse(
+      '$baseUrl/rankings/departments',
+    ).replace(queryParameters: query.isEmpty ? null : query);
     final response = await http.get(uri, headers: _headers);
     return jsonDecode(response.body);
   }
@@ -747,7 +757,10 @@ class ApiService {
   static Future<List<dynamic>> getAuthProvinces() async {
     final response = await http.get(
       Uri.parse('$baseUrl/auth/provinces'),
-      headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
     );
     final data = jsonDecode(response.body);
     return data['provinces'] is List ? data['provinces'] : [];
@@ -767,7 +780,9 @@ class ApiService {
     await getToken();
     final query = <String, String>{};
     if (province != null && province.isNotEmpty) query['province'] = province;
-    final uri = Uri.parse('$baseUrl/clans/departments').replace(queryParameters: query.isEmpty ? null : query);
+    final uri = Uri.parse(
+      '$baseUrl/clans/departments',
+    ).replace(queryParameters: query.isEmpty ? null : query);
     final response = await http.get(uri, headers: _headers);
     final data = jsonDecode(response.body);
     return data['departments'] is List ? data['departments'] : [];

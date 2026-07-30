@@ -6,10 +6,7 @@ import '../theme/app_theme.dart';
 class MissionsScreen extends StatefulWidget {
   final List<GeoMissionDto> missions;
 
-  const MissionsScreen({
-    super.key,
-    required this.missions,
-  });
+  const MissionsScreen({super.key, required this.missions});
 
   static const typeMeta = {
     'steps': {
@@ -40,6 +37,7 @@ class MissionsScreen extends StatefulWidget {
 
 class _MissionsScreenState extends State<MissionsScreen> {
   late List<GeoMissionDto> _missions;
+  String? _claimingMissionId;
 
   @override
   void initState() {
@@ -48,10 +46,9 @@ class _MissionsScreenState extends State<MissionsScreen> {
   }
 
   Future<void> _claimReward(GeoMissionDto mission) async {
+    setState(() => _claimingMissionId = mission.id);
     try {
-      final result = await ApiService.claimMissionReward(
-        missionId: mission.id,
-      );
+      final result = await ApiService.claimMissionReward(missionId: mission.id);
 
       if (result['success'] == true && mounted) {
         setState(() {
@@ -101,6 +98,10 @@ class _MissionsScreenState extends State<MissionsScreen> {
           ),
         );
       }
+    } finally {
+      if (mounted) {
+        setState(() => _claimingMissionId = null);
+      }
     }
   }
 
@@ -115,17 +116,19 @@ class _MissionsScreenState extends State<MissionsScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final textPrimary = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final textSecondary = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+    final textPrimary = isDark
+        ? AppColors.textPrimaryDark
+        : AppColors.textPrimaryLight;
+    final textSecondary = isDark
+        ? AppColors.textSecondaryDark
+        : AppColors.textSecondaryLight;
     final card = isDark ? AppColors.cardDark : AppColors.cardLight;
     final bg = isDark ? AppColors.bgDark : AppColors.bgLight;
     final completedCount = _missions.where((m) => m.isCompleted).length;
     final grouped = _groupByType();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Misiones'),
-      ),
+      appBar: AppBar(title: const Text('Misiones')),
       body: SafeArea(
         child: _missions.isEmpty
             ? Center(
@@ -142,11 +145,16 @@ class _MissionsScreenState extends State<MissionsScreen> {
                     decoration: BoxDecoration(
                       color: card,
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: AppColors.primary.withAlpha(70)),
+                      border: Border.all(
+                        color: AppColors.primary.withAlpha(70),
+                      ),
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.flag_rounded, color: AppColors.primary),
+                        const Icon(
+                          Icons.flag_rounded,
+                          color: AppColors.primary,
+                        ),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Text(
@@ -162,49 +170,55 @@ class _MissionsScreenState extends State<MissionsScreen> {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  ...MissionsScreen.typeOrder.where((t) => grouped.containsKey(t)).map(
-                    (type) {
-                      final meta = MissionsScreen.typeMeta[type]!;
-                      final typeMissions = grouped[type]!;
-                      final typeCompleted = typeMissions.where((m) => m.isCompleted).length;
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 20),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _TypeHeader(
-                              icon: meta['icon'] as IconData,
-                              label: meta['label'] as String,
-                              description: meta['desc'] as String,
-                              color: meta['color'] as Color,
-                              completed: typeCompleted,
-                              total: typeMissions.length,
-                              isDark: isDark,
-                              textPrimary: textPrimary,
-                              textSecondary: textSecondary,
-                            ),
-                            const SizedBox(height: 12),
-                            ...typeMissions.map(
-                              (mission) => Padding(
-                                padding: const EdgeInsets.only(bottom: 10),
-                                child: _MissionCard(
-                                  mission: mission,
-                                  isDark: isDark,
-                                  textPrimary: textPrimary,
-                                  textSecondary: textSecondary,
-                                  card: card,
-                                  bg: bg,
-                                  onClaim: mission.isCompleted && !mission.isClaimed
-                                      ? () => _claimReward(mission)
-                                      : null,
+                  ...MissionsScreen.typeOrder
+                      .where((t) => grouped.containsKey(t))
+                      .map((type) {
+                        final meta = MissionsScreen.typeMeta[type]!;
+                        final typeMissions = grouped[type]!;
+                        final typeCompleted = typeMissions
+                            .where((m) => m.isCompleted)
+                            .length;
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 20),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _TypeHeader(
+                                icon: meta['icon'] as IconData,
+                                label: meta['label'] as String,
+                                description: meta['desc'] as String,
+                                color: meta['color'] as Color,
+                                completed: typeCompleted,
+                                total: typeMissions.length,
+                                isDark: isDark,
+                                textPrimary: textPrimary,
+                                textSecondary: textSecondary,
+                              ),
+                              const SizedBox(height: 12),
+                              ...typeMissions.map(
+                                (mission) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 10),
+                                  child: _MissionCard(
+                                    mission: mission,
+                                    isDark: isDark,
+                                    textPrimary: textPrimary,
+                                    textSecondary: textSecondary,
+                                    card: card,
+                                    bg: bg,
+                                    isClaiming:
+                                        _claimingMissionId == mission.id,
+                                    onClaim:
+                                        mission.isCompleted &&
+                                            !mission.isClaimed
+                                        ? () => _claimReward(mission)
+                                        : null,
+                                  ),
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
+                            ],
+                          ),
+                        );
+                      }),
                 ],
               ),
       ),
@@ -219,6 +233,7 @@ class _MissionCard extends StatelessWidget {
   final Color textSecondary;
   final Color card;
   final Color bg;
+  final bool isClaiming;
   final VoidCallback? onClaim;
 
   const _MissionCard({
@@ -228,6 +243,7 @@ class _MissionCard extends StatelessWidget {
     required this.textSecondary,
     required this.card,
     required this.bg,
+    this.isClaiming = false,
     this.onClaim,
   });
 
@@ -251,15 +267,18 @@ class _MissionCard extends StatelessWidget {
     final borderColor = mission.isClaimed
         ? typeColor
         : (mission.isCompleted
-            ? Colors.orange.withAlpha(180)
-            : Colors.transparent);
+              ? AppColors.primary.withAlpha(180)
+              : Colors.transparent);
 
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: card,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: borderColor, width: mission.isCompleted ? 2 : 1),
+        border: Border.all(
+          color: borderColor,
+          width: mission.isCompleted ? 2 : 1,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -289,10 +308,16 @@ class _MissionCard extends StatelessWidget {
               if (mission.isClaimed)
                 Icon(Icons.check_circle_rounded, color: typeColor)
               else if (mission.isCompleted)
-                const Icon(Icons.monetization_on_rounded, color: Colors.orange)
+                const Icon(
+                  Icons.monetization_on_rounded,
+                  color: AppColors.primary,
+                )
               else
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: typeColor.withAlpha(30),
                     borderRadius: BorderRadius.circular(8),
@@ -345,16 +370,30 @@ class _MissionCard extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: onClaim,
-                icon: const Icon(Icons.monetization_on, size: 18),
-                label: Text('Reclamar ${mission.rewardCoins}🪙 · ${mission.rewardXp} XP'),
+                onPressed: isClaiming ? null : onClaim,
+                icon: isClaiming
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.monetization_on, size: 18),
+                label: Text(
+                  isClaiming
+                      ? 'Reclamando...'
+                      : 'Reclamar ${mission.rewardCoins}🪙 · ${mission.rewardXp} XP',
+                ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.orange,
+                  backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
+                  elevation: 0,
                 ),
               ),
             ),
@@ -471,7 +510,9 @@ class _ProgressRow extends StatelessWidget {
             child: LinearProgressIndicator(
               value: progress,
               minHeight: 7,
-              backgroundColor: isDark ? AppColors.cardAltDark : const Color(0xFFE0E0E0),
+              backgroundColor: isDark
+                  ? AppColors.cardAltDark
+                  : const Color(0xFFE0E0E0),
               valueColor: AlwaysStoppedAnimation<Color>(
                 showClaimButton ? Colors.orange : typeColor,
               ),
@@ -481,7 +522,11 @@ class _ProgressRow extends StatelessWidget {
         const SizedBox(width: 8),
         Text(
           detail,
-          style: TextStyle(color: textPrimary, fontSize: 11, fontWeight: FontWeight.w600),
+          style: TextStyle(
+            color: textPrimary,
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ],
     );

@@ -170,7 +170,9 @@ class _MapScreenState extends State<MapScreen>
           result.sort((a, b) => a.name.compareTo(b.name));
           break;
         case 'reward':
-          result.sort((a, b) => b.checkinRewardCoins.compareTo(a.checkinRewardCoins));
+          result.sort(
+            (a, b) => b.checkinRewardCoins.compareTo(a.checkinRewardCoins),
+          );
           break;
         case 'distance':
         default:
@@ -183,7 +185,12 @@ class _MapScreenState extends State<MapScreen>
   }
 
   /// Abre el bottom sheet de filtros con diseño premium.
-  void _showFilterSheet(bool isDark, Color card, Color textPrimary, Color textSecondary) {
+  void _showFilterSheet(
+    bool isDark,
+    Color card,
+    Color textPrimary,
+    Color textSecondary,
+  ) {
     // Valores temporales que se aplican solo al confirmar
     double? tempMaxDist = _filterMaxDistanceM;
     bool tempOnlyOffer = _filterOnlyWithOffer;
@@ -218,12 +225,23 @@ class _MapScreenState extends State<MapScreen>
                 onTap: () => setSheetState(() => tempMaxDist = value),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 160),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
-                    color: selected ? primary : (isDark ? Colors.white.withAlpha(12) : Colors.black.withAlpha(6)),
+                    color: selected
+                        ? primary
+                        : (isDark
+                              ? Colors.white.withAlpha(12)
+                              : Colors.black.withAlpha(6)),
                     borderRadius: BorderRadius.circular(50),
                     border: Border.all(
-                      color: selected ? primary : (isDark ? Colors.white.withAlpha(30) : Colors.black.withAlpha(20)),
+                      color: selected
+                          ? primary
+                          : (isDark
+                                ? Colors.white.withAlpha(30)
+                                : Colors.black.withAlpha(20)),
                     ),
                   ),
                   child: Text(
@@ -244,18 +262,33 @@ class _MapScreenState extends State<MapScreen>
                 onTap: () => setSheetState(() => tempSort = value),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 160),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
-                    color: selected ? primary : (isDark ? Colors.white.withAlpha(12) : Colors.black.withAlpha(6)),
+                    color: selected
+                        ? primary
+                        : (isDark
+                              ? Colors.white.withAlpha(12)
+                              : Colors.black.withAlpha(6)),
                     borderRadius: BorderRadius.circular(50),
                     border: Border.all(
-                      color: selected ? primary : (isDark ? Colors.white.withAlpha(30) : Colors.black.withAlpha(20)),
+                      color: selected
+                          ? primary
+                          : (isDark
+                                ? Colors.white.withAlpha(30)
+                                : Colors.black.withAlpha(20)),
                     ),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(icon, size: 14, color: selected ? Colors.white : textSecondary),
+                      Icon(
+                        icon,
+                        size: 14,
+                        color: selected ? Colors.white : textSecondary,
+                      ),
                       const SizedBox(width: 6),
                       Text(
                         label,
@@ -271,18 +304,32 @@ class _MapScreenState extends State<MapScreen>
               );
             }
 
-            Widget toggleRow(String label, String subtitle, IconData icon, Color iconColor, bool value, ValueChanged<bool> onChanged) {
+            Widget toggleRow(
+              String label,
+              String subtitle,
+              IconData icon,
+              Color iconColor,
+              bool value,
+              ValueChanged<bool> onChanged,
+            ) {
               return GestureDetector(
                 onTap: () => setSheetState(() => onChanged(!value)),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
                   decoration: BoxDecoration(
                     color: value
                         ? iconColor.withAlpha(isDark ? 30 : 15)
-                        : (isDark ? Colors.white.withAlpha(8) : Colors.black.withAlpha(4)),
+                        : (isDark
+                              ? Colors.white.withAlpha(8)
+                              : Colors.black.withAlpha(4)),
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(
-                      color: value ? iconColor.withAlpha(120) : Colors.transparent,
+                      color: value
+                          ? iconColor.withAlpha(120)
+                          : Colors.transparent,
                     ),
                   ),
                   child: Row(
@@ -301,8 +348,21 @@ class _MapScreenState extends State<MapScreen>
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(label, style: TextStyle(color: textPrimary, fontSize: 14, fontWeight: FontWeight.w600)),
-                            Text(subtitle, style: TextStyle(color: textSecondary, fontSize: 12)),
+                            Text(
+                              label,
+                              style: TextStyle(
+                                color: textPrimary,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            Text(
+                              subtitle,
+                              style: TextStyle(
+                                color: textSecondary,
+                                fontSize: 12,
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -311,12 +371,18 @@ class _MapScreenState extends State<MapScreen>
                         width: 46,
                         height: 26,
                         decoration: BoxDecoration(
-                          color: value ? iconColor : (isDark ? Colors.white.withAlpha(30) : Colors.black.withAlpha(20)),
+                          color: value
+                              ? iconColor
+                              : (isDark
+                                    ? Colors.white.withAlpha(30)
+                                    : Colors.black.withAlpha(20)),
                           borderRadius: BorderRadius.circular(13),
                         ),
                         child: AnimatedAlign(
                           duration: const Duration(milliseconds: 180),
-                          alignment: value ? Alignment.centerRight : Alignment.centerLeft,
+                          alignment: value
+                              ? Alignment.centerRight
+                              : Alignment.centerLeft,
                           child: Container(
                             margin: const EdgeInsets.all(3),
                             width: 20,
@@ -337,7 +403,9 @@ class _MapScreenState extends State<MapScreen>
             return Container(
               decoration: BoxDecoration(
                 color: isDark ? const Color(0xFF1C1C2E) : Colors.white,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(28),
+                ),
               ),
               padding: EdgeInsets.only(
                 left: 20,
@@ -355,7 +423,9 @@ class _MapScreenState extends State<MapScreen>
                       width: 40,
                       height: 4,
                       decoration: BoxDecoration(
-                        color: isDark ? Colors.white.withAlpha(40) : Colors.black.withAlpha(20),
+                        color: isDark
+                            ? Colors.white.withAlpha(40)
+                            : Colors.black.withAlpha(20),
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -369,7 +439,11 @@ class _MapScreenState extends State<MapScreen>
                           color: primary.withAlpha(20),
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: Icon(Icons.tune_rounded, color: primary, size: 20),
+                        child: Icon(
+                          Icons.tune_rounded,
+                          color: primary,
+                          size: 20,
+                        ),
                       ),
                       const SizedBox(width: 12),
                       Text(
@@ -389,7 +463,13 @@ class _MapScreenState extends State<MapScreen>
                           tempOnlyNotVisited = false;
                           tempSort = 'distance';
                         }),
-                        child: Text('Limpiar', style: TextStyle(color: primary, fontWeight: FontWeight.w600)),
+                        child: Text(
+                          'Limpiar',
+                          style: TextStyle(
+                            color: primary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -416,8 +496,16 @@ class _MapScreenState extends State<MapScreen>
                     spacing: 8,
                     runSpacing: 8,
                     children: [
-                      sortChip('Más cercano', 'distance', Icons.near_me_rounded),
-                      sortChip('Nombre A-Z', 'name', Icons.sort_by_alpha_rounded),
+                      sortChip(
+                        'Más cercano',
+                        'distance',
+                        Icons.near_me_rounded,
+                      ),
+                      sortChip(
+                        'Nombre A-Z',
+                        'name',
+                        Icons.sort_by_alpha_rounded,
+                      ),
                       sortChip('Mayor recompensa', 'reward', Icons.eco_rounded),
                     ],
                   ),
@@ -469,7 +557,10 @@ class _MapScreenState extends State<MapScreen>
                       },
                       child: const Text(
                         'Aplicar filtros',
-                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                   ),
@@ -1076,10 +1167,7 @@ class _MapScreenState extends State<MapScreen>
                           color: Colors.white,
                         ),
                       )
-                    : const Icon(
-                        Icons.auto_awesome,
-                        color: Colors.white,
-                      ),
+                    : const Icon(Icons.auto_awesome, color: Colors.white),
               ),
             ),
             // Botón "Mi ubicación"
@@ -1301,60 +1389,62 @@ class _MapScreenState extends State<MapScreen>
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-          decoration: BoxDecoration(
-            color: card.withAlpha(isDark ? 235 : 245),
-            borderRadius: BorderRadius.circular(999),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withAlpha(isDark ? 70 : 20),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            decoration: BoxDecoration(
+              color: card.withAlpha(isDark ? 235 : 245),
+              borderRadius: BorderRadius.circular(999),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withAlpha(isDark ? 70 : 20),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _filterChip(
+                  label: 'Comercios',
+                  icon: Icons.store_mall_directory_rounded,
+                  color: AppColors.primary,
+                  selected: _showBusinesses,
+                  onTap: () =>
+                      setState(() => _showBusinesses = !_showBusinesses),
+                ),
+                const SizedBox(width: 6),
+                _filterChip(
+                  label: 'Turísticos',
+                  icon: Icons.tips_and_updates_rounded,
+                  color: const Color(0xFFFFC857),
+                  selected: _showTouristPois,
+                  onTap: () =>
+                      setState(() => _showTouristPois = !_showTouristPois),
+                ),
+              ],
+            ),
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _filterChip(
-                label: 'Comercios',
-                icon: Icons.store_mall_directory_rounded,
-                color: AppColors.primary,
-                selected: _showBusinesses,
-                onTap: () => setState(() => _showBusinesses = !_showBusinesses),
-              ),
-              const SizedBox(width: 6),
-              _filterChip(
-                label: 'Turísticos',
-                icon: Icons.tips_and_updates_rounded,
-                color: const Color(0xFFFFC857),
-                selected: _showTouristPois,
-                onTap: () => setState(() => _showTouristPois = !_showTouristPois),
-              ),
-            ],
+          const SizedBox(width: 8),
+          Container(
+            decoration: BoxDecoration(
+              color: card.withAlpha(isDark ? 235 : 245),
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withAlpha(isDark ? 70 : 20),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: IconButton(
+              icon: Icon(Icons.layers_rounded, color: textPrimary, size: 22),
+              onPressed: () {},
+              padding: const EdgeInsets.all(12),
+              constraints: const BoxConstraints(),
+            ),
           ),
-        ),
-        const SizedBox(width: 8),
-        Container(
-          decoration: BoxDecoration(
-            color: card.withAlpha(isDark ? 235 : 245),
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withAlpha(isDark ? 70 : 20),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: IconButton(
-            icon: Icon(Icons.layers_rounded, color: textPrimary, size: 22),
-            onPressed: () {},
-            padding: const EdgeInsets.all(12),
-            constraints: const BoxConstraints(),
-          ),
-        ),
         ],
       ),
     );
@@ -1477,9 +1567,16 @@ class _MapScreenState extends State<MapScreen>
                       icon: Icon(
                         Icons.tune_rounded,
                         size: 18,
-                        color: _hasActiveFilters ? AppColors.primary : AppColors.primary,
+                        color: _hasActiveFilters
+                            ? AppColors.primary
+                            : AppColors.primary,
                       ),
-                      onPressed: () => _showFilterSheet(isDark, card, textPrimary, textSecondary),
+                      onPressed: () => _showFilterSheet(
+                        isDark,
+                        card,
+                        textPrimary,
+                        textSecondary,
+                      ),
                       constraints: const BoxConstraints(),
                       padding: const EdgeInsets.all(8),
                     ),
@@ -1783,29 +1880,36 @@ class _MapScreenState extends State<MapScreen>
           mainAxisSize: MainAxisSize.min,
           children: [
             // ── Imagen del local ────────────────────────────────
-            if (business.imageUrl != null)
-              SizedBox(
-                height: 140,
-                width: double.infinity,
-                child: Image.network(
-                  business.imageUrl!,
-                  fit: BoxFit.cover,
-                  loadingBuilder: (_, child, progress) => progress == null
-                      ? child
-                      : Container(
-                          color: AppColors.primary.withAlpha(15),
-                          child: const Center(
-                            child: CircularProgressIndicator(
-                              color: AppColors.primary,
-                              strokeWidth: 2,
-                            ),
-                          ),
-                        ),
-                  errorBuilder: (_, __, ___) => _imagePlaceholder(),
+            GestureDetector(
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => BusinessProfileScreen(business: business),
                 ),
-              )
-            else
-              _imagePlaceholder(),
+              ),
+              child: business.imageUrl != null
+                  ? SizedBox(
+                      height: 140,
+                      width: double.infinity,
+                      child: Image.network(
+                        business.imageUrl!,
+                        fit: BoxFit.cover,
+                        loadingBuilder: (_, child, progress) => progress == null
+                            ? child
+                            : Container(
+                                color: AppColors.primary.withAlpha(15),
+                                child: const Center(
+                                  child: CircularProgressIndicator(
+                                    color: AppColors.primary,
+                                    strokeWidth: 2,
+                                  ),
+                                ),
+                              ),
+                        errorBuilder: (_, __, ___) => _imagePlaceholder(),
+                      ),
+                    )
+                  : _imagePlaceholder(),
+            ),
 
             // ── Contenido ───────────────────────────────────────
             Padding(
@@ -2042,20 +2146,28 @@ class _MapScreenState extends State<MapScreen>
           ),
           if (poi.imageUrl != null && poi.imageUrl!.isNotEmpty) ...[
             const SizedBox(height: 10),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(14),
-              child: Image.network(
-                poi.imageUrl!,
-                width: double.infinity,
-                height: 120,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
+            GestureDetector(
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => TouristPoiProfileScreen(poi: poi),
+                ),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: Image.network(
+                  poi.imageUrl!,
+                  width: double.infinity,
                   height: 120,
-                  color: AppColors.primary.withAlpha(20),
-                  alignment: Alignment.center,
-                  child: const Icon(
-                    Icons.image_not_supported_rounded,
-                    color: AppColors.primary,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    height: 120,
+                    color: AppColors.primary.withAlpha(20),
+                    alignment: Alignment.center,
+                    child: const Icon(
+                      Icons.image_not_supported_rounded,
+                      color: AppColors.primary,
+                    ),
                   ),
                 ),
               ),

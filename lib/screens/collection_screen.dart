@@ -338,8 +338,8 @@ class _CollectionScreenState extends State<CollectionScreen>
           final color = _getCategoryHeaderColor(category);
 
           return GestureDetector(
-            onTap: () {
-              Navigator.of(context).push(
+            onTap: () async {
+              await Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (_) => CategoryCollectionDetailScreen(
                     categoryName: category,
@@ -347,6 +347,7 @@ class _CollectionScreenState extends State<CollectionScreen>
                   ),
                 ),
               );
+              if (mounted) _loadData();
             },
             child: Container(
               height: 210,
@@ -1278,8 +1279,8 @@ class _CategoryCollectionDetailScreenState
     }
 
     return GestureDetector(
-      onTap: () {
-        Navigator.of(context).push(
+      onTap: () async {
+        final changed = await Navigator.of(context).push<bool>(
           MaterialPageRoute(
             builder: (_) => CollectibleDetailScreen(
               collectibleId: int.tryParse(item.collectibleId) ?? 0,
@@ -1287,6 +1288,7 @@ class _CategoryCollectionDetailScreenState
             ),
           ),
         );
+        if (changed == true && context.mounted) Navigator.of(context).pop(true);
       },
       child: Container(
         decoration: BoxDecoration(

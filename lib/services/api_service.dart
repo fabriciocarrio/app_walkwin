@@ -488,6 +488,17 @@ class ApiService {
     return jsonDecode(response.body);
   }
 
+  static Future<Map<String, dynamic>> craftCollectibles({
+    required List<int> collectibleIds,
+  }) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/exploration/collectibles/craft'),
+      headers: _headers,
+      body: jsonEncode({'collectible_ids': collectibleIds}),
+    );
+    return jsonDecode(response.body);
+  }
+
   static Future<Map<String, dynamic>> getCollectibleDetail(
     int collectibleId,
   ) async {

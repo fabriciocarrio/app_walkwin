@@ -21,18 +21,34 @@ class CollectibleDetailScreen extends StatefulWidget {
 class _CollectibleDetailScreenState extends State<CollectibleDetailScreen> {
   Map<String, dynamic>? _detail;
   bool _loading = true;
-  bool _fusing = false;
+  bool _crafting = false;
   late int _quantity;
-  late int _rarityTier;
   late String _rarity;
+  List<CollectibleSpawnDto> _craftCandidates = [];
 
   @override
   void initState() {
     super.initState();
     _quantity = widget.item.quantity;
-    _rarityTier = widget.item.rarityTier;
     _rarity = widget.item.collectibleRarity;
     _loadDetail();
+    _loadCraftCandidates();
+  }
+
+  Future<void> _loadCraftCandidates() async {
+    try {
+      final result = await ApiService.getCollectibleInventory();
+      final list = result['data'] as List? ?? [];
+      final sameRarity = list
+          .whereType<Map<String, dynamic>>()
+          .map((c) => CollectibleSpawnDto.fromJson(c))
+          .where((c) =>
+              c.collectibleId != widget.item.collectibleId &&
+              c.quantity >= 1 &&
+              c.collectibleRarity.toLowerCase() == _rarity.toLowerCase())
+          .toList();
+      if (mounted) setState(() => _craftCandidates = sameRarity);
+    } catch (_) {}
   }
 
   Future<void> _loadDetail() async {
@@ -51,80 +67,126 @@ class _CollectibleDetailScreenState extends State<CollectibleDetailScreen> {
     }
   }
 
-  Future<void> _onFuse() async {
-    final confirm = await showDialog<bool>(
+  Future<void> _onCraft() async {
+    if (_craftCandidates.length < 2) return;
+
+    final selected = await showModalBottomSheet<List<CollectibleSpawnDto>>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Fusionar tarjeta'),
-        content: Text(
-          'Vas a fusionar 5 copias de "${widget.item.collectibleName}" para subir su rareza. ¿Estás seguro?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancelar'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.deepPurple),
-            child: const Text('¡Fusionar!', style: TextStyle(color: Colors.white)),
-          ),
-        ],
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _CraftSelectorSheet(
+        currentCard: widget.item,
+        candidates: _craftCandidates,
       ),
     );
 
-    if (confirm != true) return;
+    if (selected == null || selected.length != 2) return;
 
-    setState(() => _fusing = true);
+    setState(() => _crafting = true);
 
     try {
-      final result = await ApiService.fuseCollectibles(
-        collectibleId: widget.item.collectibleId,
+      final result = await ApiService.craftCollectibles(
+        collectibleIds: [
+          int.tryParse(widget.item.collectibleId) ?? 0,
+          int.tryParse(selected[0].collectibleId) ?? 0,
+          int.tryParse(selected[1].collectibleId) ?? 0,
+        ],
       );
 
       if (!mounted) return;
 
       if (result['success'] == true) {
-        final data = result['data'] as Map<String, dynamic>;
-        final newRarity = data['rarity'] as String? ?? widget.item.collectibleRarity;
-        final newQuantity = (data['quantity'] as num?)?.toInt() ?? widget.item.quantity;
-        final newTier = (data['rarity_tier'] as num?)?.toInt() ?? widget.item.rarityTier;
+        final data = result['data'] as Map<String, dynamic>? ?? {};
+        final crafted = data['crafted'] as Map<String, dynamic>? ?? {};
+        final craftedName = crafted['collectible_name']?.toString() ?? 'Nueva tarjeta';
+        final craftedRarity = crafted['collectible_rarity']?.toString() ?? 'common';
+        final craftedImage = crafted['collectible_image_url']?.toString();
 
         setState(() {
-          _fusing = false;
-          _quantity = newQuantity;
-          _rarityTier = newTier;
-          _rarity = newRarity;
+          _crafting = false;
+          _quantity = _quantity - 1;
         });
 
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('¡Fusión exitosa! Rareza: $newRarity'),
-              backgroundColor: Colors.deepPurple,
-            ),
-          );
+        await _showCraftResult(craftedName, craftedRarity, craftedImage);
+
+        if (!mounted) return;
+
+        if (_quantity <= 0) {
+          Navigator.of(context).pop(true);
+        } else {
+          await _loadCraftCandidates();
         }
       } else {
-        setState(() => _fusing = false);
+        setState(() => _crafting = false);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(result['message']?.toString() ?? 'Error al fusionar'),
+              content: Text(result['message']?.toString() ?? 'Error al combinar tarjetas'),
               backgroundColor: Colors.redAccent,
             ),
           );
         }
       }
     } catch (e) {
-      setState(() => _fusing = false);
+      setState(() => _crafting = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error de red: $e'), backgroundColor: Colors.redAccent),
         );
       }
     }
+  }
+
+  Future<void> _showCraftResult(String name, String rarity, String? imageUrl) async {
+    final rarityColor = _rarityColor(rarity);
+    await showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('¡Tarjeta creada!', textAlign: TextAlign.center),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: Container(
+                width: 140,
+                height: 180,
+                color: rarityColor.withOpacity(0.15),
+                child: imageUrl != null && imageUrl.isNotEmpty
+                    ? Image.network(imageUrl, fit: BoxFit.cover)
+                    : Icon(Icons.auto_awesome, color: rarityColor, size: 40),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              name,
+              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: rarityColor,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                rarity.toUpperCase(),
+                style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('¡Genial!'),
+          ),
+        ],
+      ),
+    );
   }
 
   Color _rarityColor(String rarity) {
@@ -269,18 +331,20 @@ class _CollectibleDetailScreenState extends State<CollectibleDetailScreen> {
                             ],
                           ),
                         ),
-                        if (_quantity >= 5 && _rarityTier < 3) ...[
+                        if (_craftCandidates.length >= 2 &&
+                            _rarity.toLowerCase() != 'legendary' &&
+                            _rarity.toLowerCase() != 'legendaria') ...[
                         const SizedBox(width: 12),
                         ElevatedButton.icon(
-                          onPressed: _fusing ? null : _onFuse,
-                          icon: _fusing
+                          onPressed: _crafting ? null : _onCraft,
+                          icon: _crafting
                               ? const SizedBox(
                                   width: 16,
                                   height: 16,
                                   child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                                 )
-                              : const Icon(Icons.auto_awesome, size: 18),
-                          label: const Text('Fusionar'),
+                              : const Icon(Icons.auto_fix_high, size: 18),
+                          label: const Text('Combinar'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.deepPurple,
                             foregroundColor: Colors.white,
@@ -413,6 +477,216 @@ class _CollectibleDetailScreenState extends State<CollectibleDetailScreen> {
                 fontWeight: FontWeight.w600,
                 fontSize: 14,
                 color: isDark ? Colors.white : Colors.black87,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CraftSelectorSheet extends StatefulWidget {
+  final CollectibleSpawnDto currentCard;
+  final List<CollectibleSpawnDto> candidates;
+
+  const _CraftSelectorSheet({
+    required this.currentCard,
+    required this.candidates,
+  });
+
+  @override
+  State<_CraftSelectorSheet> createState() => _CraftSelectorSheetState();
+}
+
+class _CraftSelectorSheetState extends State<_CraftSelectorSheet> {
+  final List<CollectibleSpawnDto> _selected = [];
+
+  String _nextRarityLabel(String rarity) {
+    switch (rarity.toLowerCase()) {
+      case 'common':
+        return 'RARA';
+      case 'rare':
+        return 'ÉPICA';
+      case 'epic':
+        return 'LEGENDARIA';
+      default:
+        return 'de mayor rareza';
+    }
+  }
+
+  Color _rarityColor(String rarity) {
+    switch (rarity.toLowerCase()) {
+      case 'legendary':
+        return Colors.orange;
+      case 'epic':
+        return Colors.purple;
+      case 'rare':
+        return Colors.blue;
+      default:
+        return Colors.green;
+    }
+  }
+
+  void _toggle(CollectibleSpawnDto card) {
+    setState(() {
+      if (_selected.any((c) => c.collectibleId == card.collectibleId)) {
+        _selected.removeWhere((c) => c.collectibleId == card.collectibleId);
+      } else if (_selected.length < 2) {
+        _selected.add(card);
+      }
+    });
+  }
+
+  Widget _cardTile(CollectibleSpawnDto card, bool isDark, {bool preselected = false, bool enabled = true}) {
+    final selected = preselected || _selected.any((c) => c.collectibleId == card.collectibleId);
+    final rarityColor = _rarityColor(card.collectibleRarity);
+
+    return GestureDetector(
+      onTap: enabled ? () => _toggle(card) : null,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.cardDark : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: selected ? rarityColor : Colors.transparent,
+            width: 2,
+          ),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            card.collectibleImageUrl != null && card.collectibleImageUrl!.isNotEmpty
+                ? Image.network(card.collectibleImageUrl!, fit: BoxFit.cover)
+                : Container(color: rarityColor.withOpacity(0.2)),
+            Positioned(
+              top: 4,
+              left: 4,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                decoration: BoxDecoration(
+                  color: rarityColor,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  card.quantity > 1 ? 'x${card.quantity}' : 'x1',
+                  style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+            if (selected)
+              Positioned(
+                top: 4,
+                right: 4,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: rarityColor,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.check, color: Colors.white, size: 16),
+                ),
+              ),
+            Positioned(
+              left: 4,
+              right: 4,
+              bottom: 4,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.6),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  card.collectibleName,
+                  style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w600),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark ? AppColors.bgDark : Colors.white;
+    final canConfirm = _selected.length == 2;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      padding: const EdgeInsets.only(top: 12, bottom: 20),
+      constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.75),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade400,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Combinar tarjetas', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 4),
+                Text(
+                  'Combiná 3 tarjetas de esta rareza y obtené una tarjeta ${_nextRarityLabel(widget.currentCard.collectibleRarity)} al azar.',
+                  style: TextStyle(fontSize: 13, color: isDark ? Colors.white60 : Colors.black54),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  '${_selected.length}/2 seleccionadas',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: canConfirm ? Colors.deepPurple : (isDark ? Colors.white60 : Colors.black54),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: GridView.count(
+              crossAxisCount: 3,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
+              childAspectRatio: 0.62,
+              children: [
+                _cardTile(widget.currentCard, isDark, preselected: true, enabled: false),
+                ...widget.candidates.map((c) => _cardTile(c, isDark)),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: canConfirm ? () => Navigator.of(context).pop(_selected) : null,
+                icon: const Icon(Icons.auto_fix_high, size: 18),
+                label: const Text('Combinar'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.deepPurple,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
               ),
             ),
           ),

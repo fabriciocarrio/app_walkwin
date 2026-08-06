@@ -432,16 +432,32 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  width: 44,
+                  height: 44,
                   decoration: BoxDecoration(
                     color: const Color(0xFFE8A020).withAlpha(20),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(
-                    TablerIcons.tag,
-                    color: Color(0xFFE8A020),
-                    size: 20,
-                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: (offer.imageUrl != null && offer.imageUrl!.isNotEmpty)
+                      ? Image.network(
+                          offer.imageUrl!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => const Center(
+                            child: Icon(
+                              TablerIcons.tag,
+                              color: Color(0xFFE8A020),
+                              size: 20,
+                            ),
+                          ),
+                        )
+                      : const Center(
+                          child: Icon(
+                            TablerIcons.tag,
+                            color: Color(0xFFE8A020),
+                            size: 20,
+                          ),
+                        ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(

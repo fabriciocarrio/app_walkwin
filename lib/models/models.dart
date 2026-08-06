@@ -74,6 +74,7 @@ class BusinessOffer {
   final String id;
   final String title;
   final String? description;
+  final String? imageUrl;
   final int peCost;
   final String limitPeriod;
   final int? limitCount;
@@ -87,6 +88,7 @@ class BusinessOffer {
     required this.id,
     required this.title,
     this.description,
+    this.imageUrl,
     required this.peCost,
     required this.limitPeriod,
     this.limitCount,
@@ -102,6 +104,7 @@ class BusinessOffer {
       id: json['id']?.toString() ?? '',
       title: json['title'] ?? '',
       description: json['description'],
+      imageUrl: json['image_url']?.toString(),
       peCost: json['pe_cost'] ?? json['coin_cost'] ?? 0,
       limitPeriod: json['limit_period'] ?? 'none',
       limitCount: json['limit_count'] != null

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../config/app_config.dart';
 import '../services/api_service.dart';
 import '../theme/app_theme.dart';
+import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 
 final _avatars = List.generate(34, (i) => '${i + 1}.png');
 
@@ -202,7 +203,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     _nameController,
                     textPrimary,
                     textSecondary,
-                    icon: Icons.person_outline_rounded,
+                    icon: TablerIcons.user,
                     isDark: isDark,
                   ),
                   const SizedBox(height: 16),
@@ -211,7 +212,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     _emailController,
                     textPrimary,
                     textSecondary,
-                    icon: Icons.email_outlined,
+                    icon: TablerIcons.mail,
                     keyboardType: TextInputType.emailAddress,
                     isDark: isDark,
                   ),
@@ -221,7 +222,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     _phoneController,
                     textPrimary,
                     textSecondary,
-                    icon: Icons.phone_outlined,
+                    icon: TablerIcons.phone,
                     keyboardType: TextInputType.phone,
                     isDark: isDark,
                   ),
@@ -265,12 +266,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
               fit: BoxFit.cover,
               loadingBuilder: (_, child, progress) =>
                   progress == null ? child : Icon(
-                    Icons.person_rounded,
+                    TablerIcons.user,
                     size: 56,
                     color: textSecondary,
                   ),
               errorBuilder: (_, __, ___) => Icon(
-                Icons.person_rounded,
+                TablerIcons.user,
                 size: 56,
                 color: textSecondary,
               ),
@@ -283,7 +284,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.edit_outlined, size: 14, color: AppColors.primary),
+              Icon(TablerIcons.pencil, size: 14, color: AppColors.primary),
               const SizedBox(width: 4),
               Text(
                 'Editar',
@@ -378,12 +379,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 progress == null
                                     ? child
                                     : Icon(
-                                        Icons.person_rounded,
+                                        TablerIcons.user,
                                         size: 28,
                                         color: Colors.grey,
                                       ),
                             errorBuilder: (_, __, ___) => Icon(
-                              Icons.person_rounded,
+                              TablerIcons.user,
                               size: 28,
                               color: Colors.grey,
                             ),
@@ -564,7 +565,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             style: TextStyle(color: textSecondary, fontSize: 13),
           ),
           isExpanded: true,
-          icon: Icon(Icons.expand_more_rounded, color: textSecondary, size: 22),
+          icon: Icon(TablerIcons.chevron_down, color: textSecondary, size: 22),
           style: TextStyle(
             color: textPrimary,
             fontSize: 15,

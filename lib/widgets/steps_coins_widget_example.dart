@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:walkwin_app/widgets/steps_coins_widget.dart';
 import 'package:walkwin_app/widgets/lock_screen_widget.dart';
+import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 
 /// Ejemplo de cómo usar los widgets de pasos y monedas en tu app
 class StepsCoinsWidgetExample extends StatefulWidget {
@@ -86,7 +87,7 @@ class _StepsCoinsWidgetExampleState extends State<StepsCoinsWidgetExample> {
                     _steps += 100;
                   });
                 },
-                icon: const Icon(Icons.add),
+                icon: const Icon(TablerIcons.plus),
                 label: const Text('+ 100 pasos'),
               ),
               const SizedBox(width: 12),
@@ -97,7 +98,7 @@ class _StepsCoinsWidgetExampleState extends State<StepsCoinsWidgetExample> {
                     _coinAnimationCounter++;
                   });
                 },
-                icon: const Icon(Icons.monetization_on),
+                icon: const Icon(TablerIcons.coin),
                 label: const Text('+ 50 monedas'),
               ),
             ],

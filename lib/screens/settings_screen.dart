@@ -9,6 +9,7 @@ import '../services/step_counting_service.dart';
 import '../theme/app_theme.dart';
 import '../main.dart';
 import 'profile_screen.dart';
+import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -130,8 +131,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ),
                           child: Icon(
                             darkOn
-                                ? Icons.dark_mode_rounded
-                                : Icons.light_mode_rounded,
+                                ? TablerIcons.moon
+                                : TablerIcons.sun,
                             color: AppColors.primary,
                             size: 22,
                           ),
@@ -180,17 +181,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 'Sensor nativo',
                 'Usa el podómetro del dispositivo',
                 'native_sensor',
-                Icons.phone_android_rounded,
+                TablerIcons.device_mobile,
                 isDark,
                 card,
                 textPrimary,
                 textSecondary,
               ),
               _buildSourceOption(
-                'Google Fit',
-                'Sincroniza con Google Fit',
+                'Health Connect',
+                'Sincroniza con Health Connect de Google',
                 'google_fit',
-                Icons.fitness_center_rounded,
+                TablerIcons.weight,
                 isDark,
                 card,
                 textPrimary,
@@ -200,7 +201,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 'Apple Health',
                 'Sincroniza con Apple Health',
                 'healthkit',
-                Icons.favorite_rounded,
+                TablerIcons.heart,
                 isDark,
                 card,
                 textPrimary,
@@ -228,7 +229,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: const Icon(
-                            Icons.volume_up_rounded,
+                            TablerIcons.volume,
                             color: AppColors.primary,
                             size: 22,
                           ),
@@ -276,7 +277,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: const Icon(
-                            Icons.vibration,
+                            TablerIcons.wave_sine,
                             color: AppColors.primary,
                             size: 22,
                           ),
@@ -318,7 +319,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               _buildSectionTitle('Cuenta', textSecondary),
               const SizedBox(height: 10),
               _buildMenuItem(
-                icon: Icons.person_outline_rounded,
+                icon: TablerIcons.user,
                 title: 'Perfil',
                 isDark: isDark,
                 card: card,
@@ -331,7 +332,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ),
               _buildMenuItem(
-                icon: Icons.notifications_outlined,
+                icon: TablerIcons.bell,
                 title: 'Notificaciones',
                 isDark: isDark,
                 card: card,
@@ -340,7 +341,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 onTap: () {},
               ),
               _buildMenuItem(
-                icon: Icons.shield_outlined,
+                icon: TablerIcons.shield,
                 title: 'Privacidad',
                 isDark: isDark,
                 card: card,
@@ -349,7 +350,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 onTap: () {},
               ),
               _buildMenuItem(
-                icon: Icons.help_outline_rounded,
+                icon: TablerIcons.help_circle,
                 title: 'Ayuda',
                 isDark: isDark,
                 card: card,
@@ -364,7 +365,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 child: OutlinedButton.icon(
                   onPressed: _logout,
                   icon: const Icon(
-                    Icons.logout_rounded,
+                    TablerIcons.logout,
                     color: AppColors.danger,
                   ),
                   label: const Text(
@@ -439,14 +440,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
           child: Row(
             children: [
               const Icon(
-                Icons.check_circle_rounded,
+                TablerIcons.circle_check,
                 color: Color(0xFF10B981),
                 size: 20,
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  '${isGoogleFit ? 'Google Fit' : 'Apple Health'} está conectado. Tus pasos se sincronizarán automáticamente.',
+                  '${isGoogleFit ? 'Health Connect' : 'Apple Health'} está conectado. Tus pasos se sincronizarán automáticamente.',
                   style: TextStyle(color: textPrimary, fontSize: 13),
                 ),
               ),
@@ -473,7 +474,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: const Icon(
-                    Icons.info_outline_rounded,
+                    TablerIcons.info_circle,
                     color: AppColors.primary,
                     size: 18,
                   ),
@@ -492,9 +493,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: 12),
             Text(
               isAndroid
-                  ? '1. Tocá "Google Fit" arriba para solicitar permisos.\n'
-                      '2. En la ventana de Google, elegí la cuenta y permití el acceso a tu actividad física.\n'
-                      '3. Una vez conectado, verás el estado "Conectado" en verde.'
+                  ? '1. Tocá "Health Connect" arriba para solicitar permisos.\n'
+                      '2. Si no tenés Health Connect, se abrirá Play Store para instalarlo.\n'
+                      '3. En la ventana de Health Connect, permití la lectura de pasos.\n'
+                      '4. Una vez conectado, verás el estado "Conectado" en verde.'
                   : '1. Tocá "Apple Health" arriba para solicitar permisos.\n'
                       '2. En la ventana de Salud, activá la lectura de pasos.\n'
                       '3. Una vez conectado, verás el estado "Conectado" en verde.',
@@ -541,6 +543,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return GestureDetector(
       onTap: () async {
         if (isHealthSource) {
+          final proceed = await _showHealthExplanation(isGoogleFit);
+          if (!proceed || !mounted) return;
+
+          if (isGoogleFit) {
+            final available = await HealthService.isHealthConnectAvailable();
+            if (!available) {
+              await HealthService.promptInstallHealthConnect();
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'Health Connect no está instalado. Se abrió Play Store para instalarlo y volver a intentar.',
+                    ),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
+              return;
+            }
+          }
+
           final granted = await HealthService.requestAuthorization();
           if (!granted && mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -636,8 +659,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             children: [
                               Icon(
                                 isAuthorized
-                                    ? Icons.check_circle_rounded
-                                    : Icons.info_outline_rounded,
+                                    ? TablerIcons.circle_check
+                                    : TablerIcons.info_circle,
                                 size: 11,
                                 color: isAuthorized
                                     ? const Color(0xFF10B981)
@@ -674,13 +697,89 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             if (isSelected)
               const Icon(
-                Icons.check_circle_rounded,
+                TablerIcons.circle_check,
                 color: AppColors.primary,
                 size: 22,
               ),
           ],
         ),
       ),
+    );
+  }
+
+  Future<bool> _showHealthExplanation(bool isHealthConnect) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor:
+            Theme.of(ctx).brightness == Brightness.dark ? AppColors.cardAltDark : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+        contentPadding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+        actionsPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withAlpha(20),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(
+                TablerIcons.shield,
+                color: AppColors.primary,
+                size: 22,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                isHealthConnect ? 'Conectar Health Connect' : 'Conectar Apple Health',
+                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              isHealthConnect
+                  ? 'Vas a sincronizar tus pasos con Health Connect de Google. Solo vamos a leer la cantidad de pasos que caminaste:'
+                  : 'Vas a sincronizar tus pasos con Apple Health. Solo vamos a leer la cantidad de pasos que caminaste:',
+              style: const TextStyle(fontSize: 13, height: 1.5),
+            ),
+            const SizedBox(height: 12),
+            _buildPermissionRow(TablerIcons.walk, 'Lee únicamente tus pasos'),
+            const SizedBox(height: 8),
+            _buildPermissionRow(TablerIcons.shield, 'No accede a otros datos de salud'),
+            const SizedBox(height: 8),
+            _buildPermissionRow(TablerIcons.settings, 'Podés revocar el acceso cuando quieras'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Continuar'),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
+  }
+
+  Widget _buildPermissionRow(IconData icon, String text) {
+    return Row(
+      children: [
+        Icon(icon, color: AppColors.primary, size: 16),
+        const SizedBox(width: 8),
+        Expanded(child: Text(text, style: const TextStyle(fontSize: 12))),
+      ],
     );
   }
 
@@ -715,7 +814,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
             const Spacer(),
-            Icon(Icons.chevron_right_rounded, color: textSecondary),
+            Icon(TablerIcons.chevron_right, color: textSecondary),
           ],
         ),
       ),

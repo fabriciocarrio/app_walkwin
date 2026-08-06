@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../theme/app_theme.dart';
+import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 
 /// Pantalla de scanner QR para check-in en comercios.
 /// Retorna el payload escaneado si coincide con el comercio.
@@ -89,7 +90,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
                 IconButton(
                   onPressed: () => Navigator.pop(context, null),
                   icon: const Icon(
-                    Icons.close_rounded,
+                    TablerIcons.x,
                     color: Colors.white,
                     size: 28,
                   ),
@@ -108,7 +109,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
                 IconButton(
                   onPressed: () => _controller.toggleTorch(),
                   icon: const Icon(
-                    Icons.flashlight_on_rounded,
+                    TablerIcons.bulb,
                     color: Colors.white,
                     size: 26,
                   ),
@@ -147,7 +148,7 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       const Icon(
-                        Icons.eco_rounded,
+                        TablerIcons.leaf,
                         color: Colors.white,
                         size: 18,
                       ),

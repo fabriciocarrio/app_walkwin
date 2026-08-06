@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../theme/app_theme.dart';
+import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 
 // ═══════════════════════════════════════════════════════════════
 // SHARED CELEBRATION OVERLAY
@@ -197,7 +198,7 @@ class _MinigamesScreenState extends State<MinigamesScreen> {
               isDark: isDark,
               textPrimary: textPrimary,
               textSecondary: textSecondary,
-              icon: Icons.casino_rounded,
+              icon: TablerIcons.dice_6,
               iconColor: const Color(0xFFF59E0B),
               title: 'Ruleta de la fortuna',
               subtitle: 'Girá la ruleta (hasta 2 giros diarios) y ganá PE',
@@ -212,7 +213,7 @@ class _MinigamesScreenState extends State<MinigamesScreen> {
               isDark: isDark,
               textPrimary: textPrimary,
               textSecondary: textSecondary,
-              icon: Icons.style_rounded,
+              icon: TablerIcons.palette,
               iconColor: const Color(0xFF9C27B0),
               title: 'Raspaditas',
               subtitle: 'Rascá y descubrí tu premio (hasta 2 raspadas diarias)',
@@ -294,7 +295,7 @@ class _MinigamesScreenState extends State<MinigamesScreen> {
                   ],
                 ),
               ),
-              Icon(Icons.chevron_right_rounded, color: textSecondary, size: 22),
+              Icon(TablerIcons.chevron_right, color: textSecondary, size: 22),
             ],
           ),
         ),
@@ -480,7 +481,7 @@ class _WheelGameScreenState extends State<WheelGameScreen>
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(
-                                _canSpin ? Icons.stars_rounded : Icons.lock_clock_rounded,
+                                _canSpin ? TablerIcons.stars : TablerIcons.lock,
                                 size: 16,
                                 color: _canSpin ? const Color(0xFFF59E0B) : Colors.grey,
                               ),
@@ -521,7 +522,7 @@ class _WheelGameScreenState extends State<WheelGameScreen>
                                         BoxShadow(color: Colors.black26, blurRadius: 8),
                                       ],
                                     ),
-                                    child: const Icon(Icons.play_arrow_rounded, size: 36, color: Color(0xFF112A46)),
+                                    child: const Icon(TablerIcons.player_play, size: 36, color: Color(0xFF112A46)),
                                   ),
                                 ),
                               );
@@ -529,7 +530,7 @@ class _WheelGameScreenState extends State<WheelGameScreen>
                           ),
                         ),
                         const SizedBox(height: 8),
-                        const Icon(Icons.arrow_drop_up_rounded, size: 40, color: Color(0xFFFF6B00)),
+                        const Icon(TablerIcons.caret_up, size: 40, color: Color(0xFFFF6B00)),
                         const SizedBox(height: 20),
 
                         // Result or Spin button
@@ -560,7 +561,7 @@ class _WheelGameScreenState extends State<WheelGameScreen>
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
                                           Icon(
-                                            isWin ? Icons.stars_rounded : Icons.cancel_outlined,
+                                            isWin ? TablerIcons.stars : TablerIcons.circle_x,
                                             color: Colors.white,
                                             size: 22,
                                           ),
@@ -594,7 +595,7 @@ class _WheelGameScreenState extends State<WheelGameScreen>
                           if (_canSpin)
                             ElevatedButton.icon(
                               onPressed: _tryAgain,
-                              icon: const Icon(Icons.replay_rounded, size: 20),
+                              icon: const Icon(TablerIcons.reload, size: 20),
                               label: Text(
                                 'Volver a intentar (Queda 1 giro)',
                                 style: GoogleFonts.montserrat(fontSize: 15, fontWeight: FontWeight.w700),
@@ -617,7 +618,7 @@ class _WheelGameScreenState extends State<WheelGameScreen>
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  const Icon(Icons.lock_clock_rounded, size: 18, color: Colors.grey),
+                                  const Icon(TablerIcons.lock, size: 18, color: Colors.grey),
                                   const SizedBox(width: 8),
                                   Flexible(
                                     child: Text(
@@ -919,7 +920,7 @@ class _ScratchCardScreenState extends State<ScratchCardScreen>
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(
-                                _canPlay ? Icons.style_rounded : Icons.lock_clock_rounded,
+                                _canPlay ? TablerIcons.palette : TablerIcons.lock,
                                 size: 16,
                                 color: _canPlay ? const Color(0xFFFF6B00) : Colors.grey,
                               ),
@@ -997,8 +998,8 @@ class _ScratchCardScreenState extends State<ScratchCardScreen>
                                         duration: const Duration(milliseconds: 400),
                                         child: Icon(
                                           _revealed
-                                              ? (_prize > 0 ? Icons.star_rounded : Icons.cancel_rounded)
-                                              : Icons.help_outline_rounded,
+                                              ? (_prize > 0 ? TablerIcons.star_filled : TablerIcons.circle_x)
+                                              : TablerIcons.help_circle,
                                           color: _revealed
                                               ? (_prize > 0 ? const Color(0xFFF5C535) : const Color(0xFFE53935))
                                               : AppColors.textSecondaryLight.withOpacity(0.3),
@@ -1064,7 +1065,7 @@ class _ScratchCardScreenState extends State<ScratchCardScreen>
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.brush_rounded, size: 14, color: AppColors.textSecondaryLight),
+                              Icon(TablerIcons.brush, size: 14, color: AppColors.textSecondaryLight),
                               const SizedBox(width: 6),
                               SizedBox(
                                 width: 120,
@@ -1140,7 +1141,7 @@ class _ScratchCardScreenState extends State<ScratchCardScreen>
                           if (_canPlay)
                             ElevatedButton.icon(
                               onPressed: _tryAgain,
-                              icon: const Icon(Icons.replay_rounded, size: 20),
+                              icon: const Icon(TablerIcons.reload, size: 20),
                               label: Text(
                                 'Volver a intentar (Queda 1 jugada)',
                                 style: GoogleFonts.montserrat(fontSize: 15, fontWeight: FontWeight.w700),
@@ -1163,7 +1164,7 @@ class _ScratchCardScreenState extends State<ScratchCardScreen>
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(Icons.lock_clock_rounded, size: 18, color: Colors.grey),
+                                const Icon(TablerIcons.lock, size: 18, color: Colors.grey),
                                 const SizedBox(width: 8),
                                 Flexible(
                                   child: Text(

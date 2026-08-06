@@ -4,6 +4,7 @@ import '../services/api_service.dart';
 import '../theme/app_theme.dart';
 import 'clan_create_screen.dart';
 import 'clan_detail_screen.dart';
+import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 
 class ClanListScreen extends StatefulWidget {
   const ClanListScreen({super.key});
@@ -65,7 +66,7 @@ class _ClanListScreenState extends State<ClanListScreen> {
         title: const Text('Clanes'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.add_rounded),
+            icon: const Icon(TablerIcons.plus),
             onPressed: () async {
               final created = await Navigator.of(context).push<bool>(
                 MaterialPageRoute(builder: (_) => const ClanCreateScreen()),
@@ -86,7 +87,7 @@ class _ClanListScreenState extends State<ClanListScreen> {
                   style: TextStyle(color: textPrimary),
                   decoration: InputDecoration(
                     hintText: 'Buscar clan...',
-                    prefixIcon: Icon(Icons.search_rounded, color: textSecondary),
+                    prefixIcon: Icon(TablerIcons.search, color: textSecondary),
                     filled: true,
                     fillColor: card,
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
@@ -117,7 +118,7 @@ class _ClanListScreenState extends State<ClanListScreen> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.groups_rounded, size: 64, color: textSecondary),
+                            Icon(TablerIcons.users, size: 64, color: textSecondary),
                             const SizedBox(height: 16),
                             Text('No hay clanes aún', style: TextStyle(color: textSecondary, fontSize: 16)),
                             const SizedBox(height: 8),
@@ -203,7 +204,7 @@ class _ClanListScreenState extends State<ClanListScreen> {
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        Icon(Icons.location_on_rounded, size: 14, color: textSecondary),
+                        Icon(TablerIcons.map_pin, size: 14, color: textSecondary),
                         const SizedBox(width: 4),
                         Text(clan.department, style: TextStyle(color: textSecondary, fontSize: 12)),
                       ],
@@ -216,7 +217,7 @@ class _ClanListScreenState extends State<ClanListScreen> {
                 children: [
                   Row(
                     children: [
-                      const Icon(Icons.people_rounded, size: 16, color: Color(0xFF20D4A4)),
+                      const Icon(TablerIcons.users, size: 16, color: Color(0xFF20D4A4)),
                       const SizedBox(width: 4),
                       Text('${clan.memberCount}', style: TextStyle(color: textPrimary, fontWeight: FontWeight.w600, fontSize: 13)),
                     ],

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import 'referrals_screen.dart';
 import 'minigames_screen.dart';
+import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 
 class EarnPeScreen extends StatelessWidget {
   const EarnPeScreen({super.key});
@@ -53,7 +54,7 @@ class EarnPeScreen extends StatelessWidget {
                       color: AppColors.primary.withAlpha(26),
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    child: const Icon(Icons.emoji_events_rounded, color: AppColors.primary, size: 30),
+                    child: const Icon(TablerIcons.trophy, color: AppColors.primary, size: 30),
                   ),
                   const SizedBox(height: 14),
                   Text(
@@ -95,7 +96,7 @@ class EarnPeScreen extends StatelessWidget {
               textPrimary: textPrimary,
               textSecondary: textSecondary,
               isDark: isDark,
-              icon: Icons.group_add_rounded,
+              icon: TablerIcons.user_plus,
               iconColor: const Color(0xFF10B981),
               title: 'Gana con referidos',
               subtitle: 'Tenés tu código único — compartilo y ganan PE vos y tu amigo',
@@ -111,7 +112,7 @@ class EarnPeScreen extends StatelessWidget {
               textPrimary: textPrimary,
               textSecondary: textSecondary,
               isDark: isDark,
-              icon: Icons.casino_rounded,
+              icon: TablerIcons.dice_6,
               iconColor: const Color(0xFFF59E0B),
               title: 'Gana probando suerte',
               subtitle: 'Ruleta diaria y raspaditas para ganar PE extra',
@@ -127,7 +128,7 @@ class EarnPeScreen extends StatelessWidget {
               textPrimary: textPrimary,
               textSecondary: textSecondary,
               isDark: isDark,
-              icon: Icons.directions_walk_rounded,
+              icon: TablerIcons.walk,
               iconColor: const Color(0xFF4A9BFF),
               title: 'Caminando siempre',
               subtitle: 'Cada paso cuenta — seguí sumando con tu actividad diaria',
@@ -210,9 +211,9 @@ class EarnPeScreen extends StatelessWidget {
                 ),
               ),
               if (locked)
-                Icon(Icons.lock_rounded, color: textSecondary.withAlpha(120), size: 20)
+                Icon(TablerIcons.lock, color: textSecondary.withAlpha(120), size: 20)
               else
-                Icon(Icons.chevron_right_rounded, color: textSecondary, size: 22),
+                Icon(TablerIcons.chevron_right, color: textSecondary, size: 22),
             ],
           ),
         ),

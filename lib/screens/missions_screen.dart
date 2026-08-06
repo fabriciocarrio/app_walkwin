@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/models.dart';
 import '../services/api_service.dart';
 import '../theme/app_theme.dart';
+import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 
 class MissionsScreen extends StatefulWidget {
   final List<GeoMissionDto> missions;
@@ -10,19 +11,19 @@ class MissionsScreen extends StatefulWidget {
 
   static const typeMeta = {
     'steps': {
-      'icon': Icons.directions_walk_rounded,
+      'icon': TablerIcons.walk,
       'label': 'Pasos',
       'desc': 'Caminá y acumulá pasos para completar objetivos',
       'color': Color(0xFF207AF5),
     },
     'exploration': {
-      'icon': Icons.explore_rounded,
+      'icon': TablerIcons.compass,
       'label': 'Exploración',
       'desc': 'Visitá lugares y descubrí la ciudad',
       'color': Color(0xFF20D4A4),
     },
     'collectible': {
-      'icon': Icons.collections_bookmark_rounded,
+      'icon': TablerIcons.book_2,
       'label': 'Coleccionables',
       'desc': 'Encontrá y coleccioná objetos especiales',
       'color': Color(0xFFFF6B00),
@@ -152,7 +153,7 @@ class _MissionsScreenState extends State<MissionsScreen> {
                     child: Row(
                       children: [
                         const Icon(
-                          Icons.flag_rounded,
+                          TablerIcons.flag,
                           color: AppColors.primary,
                         ),
                         const SizedBox(width: 10),
@@ -254,7 +255,7 @@ class _MissionCard extends StatelessWidget {
 
   IconData get _typeIcon {
     final meta = MissionsScreen.typeMeta[mission.missionType];
-    return meta?['icon'] as IconData? ?? Icons.assignment_rounded;
+    return meta?['icon'] as IconData? ?? TablerIcons.checklist;
   }
 
   @override
@@ -306,10 +307,10 @@ class _MissionCard extends StatelessWidget {
                 ),
               ),
               if (mission.isClaimed)
-                Icon(Icons.check_circle_rounded, color: typeColor)
+                Icon(TablerIcons.circle_check, color: typeColor)
               else if (mission.isCompleted)
                 const Icon(
-                  Icons.monetization_on_rounded,
+                  TablerIcons.coin,
                   color: AppColors.primary,
                 )
               else
@@ -344,7 +345,7 @@ class _MissionCard extends StatelessWidget {
             const SizedBox(height: 4),
             Row(
               children: [
-                Icon(Icons.filter_list, size: 12, color: textSecondary),
+                Icon(TablerIcons.filter, size: 12, color: textSecondary),
                 const SizedBox(width: 4),
                 Expanded(
                   child: Text(
@@ -380,7 +381,7 @@ class _MissionCard extends StatelessWidget {
                           color: Colors.white,
                         ),
                       )
-                    : const Icon(Icons.monetization_on, size: 18),
+                    : const Icon(TablerIcons.coin, size: 18),
                 label: Text(
                   isClaiming
                       ? 'Reclamando...'

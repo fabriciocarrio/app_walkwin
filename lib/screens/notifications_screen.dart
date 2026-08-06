@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/notification_store.dart';
 import '../theme/app_theme.dart';
+import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -31,21 +32,21 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   IconData _iconForType(String type) {
     switch (type) {
       case 'achievement':
-        return Icons.emoji_events;
+        return TablerIcons.trophy;
       case 'rank':
-        return Icons.trending_up;
+        return TablerIcons.trending_up;
       case 'collectible':
-        return Icons.category;
+        return TablerIcons.layout_grid;
       case 'mission':
-        return Icons.explore;
+        return TablerIcons.compass;
       case 'streak':
-        return Icons.local_fire_department;
+        return TablerIcons.flame;
       case 'goal':
-        return Icons.flag;
+        return TablerIcons.flag;
       case 'progress':
-        return Icons.directions_walk;
+        return TablerIcons.walk;
       default:
-        return Icons.notifications;
+        return TablerIcons.bell;
     }
   }
 
@@ -86,7 +87,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.notifications_none_outlined, size: 64, color: textSecondary.withAlpha(100)),
+                  Icon(TablerIcons.bell, size: 64, color: textSecondary.withAlpha(100)),
                   const SizedBox(height: 16),
                   Text('Sin notificaciones', style: TextStyle(color: textSecondary, fontSize: 16)),
                 ],
@@ -108,7 +109,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                       color: AppColors.danger,
                       borderRadius: BorderRadius.circular(14),
                     ),
-                    child: const Icon(Icons.delete_outline, color: Colors.white),
+                    child: const Icon(TablerIcons.trash, color: Colors.white),
                   ),
                   onDismissed: (_) {
                     if (n.id != null) _store.delete(n.id!);

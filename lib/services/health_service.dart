@@ -6,11 +6,20 @@ class HealthService {
 
   static const _types = [HealthDataType.STEPS];
 
-  /// Request authorization from Google Fit / Apple Health.
+  /// Request authorization from Google Health Connect / Apple Health.
   static Future<bool> requestAuthorization() async {
     await Permission.activityRecognition.request();
     return _health.requestAuthorization(_types, permissions: [HealthDataAccess.READ]);
   }
+
+  /// Whether Google Health Connect is available on the device.
+  /// Always true on iOS (Apple Health is used instead).
+  static Future<bool> isHealthConnectAvailable() =>
+      _health.isHealthConnectAvailable();
+
+  /// Prompt the user to install Google Health Connect (needed on Android 13-).
+  static Future<void> promptInstallHealthConnect() =>
+      _health.installHealthConnect();
 
   /// Get total steps for today from the health platform.
   /// Returns null if unavailable or permission denied.

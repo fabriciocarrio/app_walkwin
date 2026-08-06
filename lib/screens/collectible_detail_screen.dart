@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/models.dart';
 import '../services/api_service.dart';
 import '../theme/app_theme.dart';
+import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 
 class CollectibleDetailScreen extends StatefulWidget {
   final int collectibleId;
@@ -156,7 +157,7 @@ class _CollectibleDetailScreenState extends State<CollectibleDetailScreen> {
                 color: rarityColor.withOpacity(0.15),
                 child: imageUrl != null && imageUrl.isNotEmpty
                     ? Image.network(imageUrl, fit: BoxFit.cover)
-                    : Icon(Icons.auto_awesome, color: rarityColor, size: 40),
+                    : Icon(TablerIcons.sparkles, color: rarityColor, size: 40),
               ),
             ),
             const SizedBox(height: 12),
@@ -228,13 +229,13 @@ class _CollectibleDetailScreenState extends State<CollectibleDetailScreen> {
                       fit: BoxFit.cover,
                       errorBuilder: (_, __, ___) => Container(
                         color: rarityColor.withOpacity(0.2),
-                        child: Icon(Icons.image, size: 80, color: rarityColor),
+                        child: Icon(TablerIcons.photo, size: 80, color: rarityColor),
                       ),
                     )
                   else
                     Container(
                       color: rarityColor.withOpacity(0.2),
-                      child: Icon(Icons.image, size: 80, color: rarityColor),
+                      child: Icon(TablerIcons.photo, size: 80, color: rarityColor),
                     ),
                   Container(
                     decoration: BoxDecoration(
@@ -319,7 +320,7 @@ class _CollectibleDetailScreenState extends State<CollectibleDetailScreen> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.collections_bookmark_rounded, size: 18),
+                            const Icon(TablerIcons.book_2, size: 18),
                             const SizedBox(width: 6),
                               Text(
                                 'x$_quantity',
@@ -343,7 +344,7 @@ class _CollectibleDetailScreenState extends State<CollectibleDetailScreen> {
                                   height: 16,
                                   child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                                 )
-                              : const Icon(Icons.auto_fix_high, size: 18),
+                              : const Icon(TablerIcons.wand, size: 18),
                           label: const Text('Combinar'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.deepPurple,
@@ -413,7 +414,7 @@ class _CollectibleDetailScreenState extends State<CollectibleDetailScreen> {
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.lightbulb_outline, color: rarityColor, size: 20),
+                            Icon(TablerIcons.bulb, color: rarityColor, size: 20),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Column(
@@ -585,7 +586,7 @@ class _CraftSelectorSheetState extends State<_CraftSelectorSheet> {
                     color: rarityColor,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.check, color: Colors.white, size: 16),
+                  child: const Icon(TablerIcons.check, color: Colors.white, size: 16),
                 ),
               ),
             Positioned(
@@ -679,7 +680,7 @@ class _CraftSelectorSheetState extends State<_CraftSelectorSheet> {
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: canConfirm ? () => Navigator.of(context).pop(_selected) : null,
-                icon: const Icon(Icons.auto_fix_high, size: 18),
+                icon: const Icon(TablerIcons.wand, size: 18),
                 label: const Text('Combinar'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.deepPurple,

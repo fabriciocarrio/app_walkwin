@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/models.dart';
 import '../services/api_service.dart';
 import '../theme/app_theme.dart';
+import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 
 class BusinessProfileScreen extends StatefulWidget {
   final Business business;
@@ -77,7 +78,7 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              success ? Icons.check_circle_rounded : Icons.error_rounded,
+              success ? TablerIcons.circle_check : TablerIcons.alert_circle,
               color: success ? AppColors.primary : Colors.orange.shade600,
               size: 52,
             ),
@@ -130,7 +131,7 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
-                  Icons.arrow_back_rounded,
+                  TablerIcons.arrow_back,
                   color: Colors.white,
                 ),
               ),
@@ -176,7 +177,7 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
 
                   if (b.businessHours.isNotEmpty) ...[
                     _buildInfoCard(
-                      icon: Icons.access_time_rounded,
+                      icon: TablerIcons.clock,
                       title: 'Horarios',
                       value: b.hoursSummary,
                       textPrimary: textPrimary,
@@ -197,7 +198,7 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
                     child: Row(
                       children: [
                         const Icon(
-                          Icons.eco_rounded,
+                          TablerIcons.leaf,
                           color: AppColors.primary,
                           size: 28,
                         ),
@@ -320,7 +321,7 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
         child: Row(
           children: [
             const Icon(
-              Icons.diamond_rounded,
+              TablerIcons.diamond,
               color: AppColors.primary,
               size: 20,
             ),
@@ -437,7 +438,7 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: const Icon(
-                    Icons.local_offer_rounded,
+                    TablerIcons.tag,
                     color: Color(0xFFE8A020),
                     size: 20,
                   ),
@@ -490,7 +491,7 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       const Icon(
-                        Icons.diamond_rounded,
+                        TablerIcons.diamond,
                         color: Color(0xFFE8A020),
                         size: 15,
                       ),
@@ -590,7 +591,7 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
       ),
       child: Column(
         children: [
-          Icon(Icons.local_offer_outlined, color: textSecondary, size: 36),
+          Icon(TablerIcons.tag, color: textSecondary, size: 36),
           const SizedBox(height: 10),
           Text(
             'No hay cupones disponibles\nen este momento.',
@@ -607,7 +608,7 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
       color: AppColors.primary.withAlpha(25),
       child: const Center(
         child: Icon(
-          Icons.store_mall_directory_rounded,
+          TablerIcons.building_store,
           color: AppColors.primary,
           size: 60,
         ),

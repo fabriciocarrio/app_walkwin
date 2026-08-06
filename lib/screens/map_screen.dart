@@ -13,6 +13,7 @@ import '../theme/app_theme.dart';
 import 'business_profile_screen.dart';
 import 'qr_scanner_screen.dart';
 import 'tourist_poi_profile_screen.dart';
+import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 
 class MapScreen extends StatefulWidget {
   final Business? initialBusiness;
@@ -440,7 +441,7 @@ class _MapScreenState extends State<MapScreen>
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Icon(
-                          Icons.tune_rounded,
+                          TablerIcons.adjustments_horizontal,
                           color: primary,
                           size: 20,
                         ),
@@ -499,14 +500,14 @@ class _MapScreenState extends State<MapScreen>
                       sortChip(
                         'Más cercano',
                         'distance',
-                        Icons.near_me_rounded,
+                        TablerIcons.navigation,
                       ),
                       sortChip(
                         'Nombre A-Z',
                         'name',
-                        Icons.sort_by_alpha_rounded,
+                        TablerIcons.sort_a_z,
                       ),
-                      sortChip('Mayor recompensa', 'reward', Icons.eco_rounded),
+                      sortChip('Mayor recompensa', 'reward', TablerIcons.leaf),
                     ],
                   ),
                   const SizedBox(height: 20),
@@ -516,7 +517,7 @@ class _MapScreenState extends State<MapScreen>
                   toggleRow(
                     'Con oferta activa',
                     'Comercios que tienen descuentos disponibles',
-                    Icons.local_offer_rounded,
+                    TablerIcons.tag,
                     const Color(0xFF4CAF50),
                     tempOnlyOffer,
                     (v) => tempOnlyOffer = v,
@@ -525,7 +526,7 @@ class _MapScreenState extends State<MapScreen>
                   toggleRow(
                     'Sin visitar hoy',
                     'Lugares donde todavía no hiciste check-in',
-                    Icons.check_circle_outline_rounded,
+                    TablerIcons.circle_check,
                     const Color(0xFF2196F3),
                     tempOnlyNotVisited,
                     (v) => tempOnlyNotVisited = v,
@@ -1039,7 +1040,7 @@ class _MapScreenState extends State<MapScreen>
                                 ],
                               ),
                               child: const Icon(
-                                Icons.tips_and_updates_rounded,
+                                TablerIcons.bulb,
                                 color: Color(0xFF5B3A00),
                                 size: 22,
                               ),
@@ -1090,7 +1091,7 @@ class _MapScreenState extends State<MapScreen>
                                 alignment: Alignment.center,
                                 children: [
                                   const Icon(
-                                    Icons.auto_awesome,
+                                    TablerIcons.sparkles,
                                     color: Colors.white,
                                     size: 20,
                                   ),
@@ -1167,7 +1168,7 @@ class _MapScreenState extends State<MapScreen>
                           color: Colors.white,
                         ),
                       )
-                    : const Icon(Icons.auto_awesome, color: Colors.white),
+                    : const Icon(TablerIcons.sparkles, color: Colors.white),
               ),
             ),
             // Botón "Mi ubicación"
@@ -1187,7 +1188,7 @@ class _MapScreenState extends State<MapScreen>
                   _loadExplorationData();
                 },
                 child: const Icon(
-                  Icons.my_location_rounded,
+                  TablerIcons.crosshair,
                   color: Colors.white,
                 ),
               ),
@@ -1374,8 +1375,8 @@ class _MapScreenState extends State<MapScreen>
         ),
         child: Icon(
           business.checkedInToday
-              ? Icons.verified_rounded
-              : Icons.store_mall_directory_rounded,
+              ? TablerIcons.circle_check_filled
+              : TablerIcons.building_store,
           color: isSelected ? Colors.white : AppColors.primary,
           size: isSelected ? 28 : 22,
         ),
@@ -1407,7 +1408,7 @@ class _MapScreenState extends State<MapScreen>
               children: [
                 _filterChip(
                   label: 'Comercios',
-                  icon: Icons.store_mall_directory_rounded,
+                  icon: TablerIcons.building_store,
                   color: AppColors.primary,
                   selected: _showBusinesses,
                   onTap: () =>
@@ -1416,7 +1417,7 @@ class _MapScreenState extends State<MapScreen>
                 const SizedBox(width: 6),
                 _filterChip(
                   label: 'Turísticos',
-                  icon: Icons.tips_and_updates_rounded,
+                  icon: TablerIcons.bulb,
                   color: const Color(0xFFFFC857),
                   selected: _showTouristPois,
                   onTap: () =>
@@ -1439,7 +1440,7 @@ class _MapScreenState extends State<MapScreen>
               ],
             ),
             child: IconButton(
-              icon: Icon(Icons.layers_rounded, color: textPrimary, size: 22),
+              icon: Icon(TablerIcons.layers_union, color: textPrimary, size: 22),
               onPressed: () {},
               padding: const EdgeInsets.all(12),
               constraints: const BoxConstraints(),
@@ -1516,7 +1517,7 @@ class _MapScreenState extends State<MapScreen>
           child: Row(
             children: [
               const Icon(
-                Icons.search_rounded,
+                TablerIcons.search,
                 color: AppColors.primary,
                 size: 22,
               ),
@@ -1546,7 +1547,7 @@ class _MapScreenState extends State<MapScreen>
                   child: Padding(
                     padding: const EdgeInsets.only(right: 8.0),
                     child: Icon(
-                      Icons.close_rounded,
+                      TablerIcons.x,
                       color: textSecondary,
                       size: 18,
                     ),
@@ -1565,7 +1566,7 @@ class _MapScreenState extends State<MapScreen>
                     ),
                     child: IconButton(
                       icon: Icon(
-                        Icons.tune_rounded,
+                        TablerIcons.adjustments_horizontal,
                         size: 18,
                         color: _hasActiveFilters
                             ? AppColors.primary
@@ -1694,7 +1695,7 @@ class _MapScreenState extends State<MapScreen>
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 const Icon(
-                                  Icons.eco_rounded,
+                                  TablerIcons.leaf,
                                   color: AppColors.primary,
                                   size: 12,
                                 ),
@@ -1738,7 +1739,7 @@ class _MapScreenState extends State<MapScreen>
             ),
             child: Row(
               children: [
-                Icon(Icons.search_off_rounded, color: textSecondary, size: 18),
+                Icon(TablerIcons.search_off, color: textSecondary, size: 18),
                 const SizedBox(width: 10),
                 Text(
                   'Sin resultados para "${_searchController.text}"',
@@ -1761,7 +1762,7 @@ class _MapScreenState extends State<MapScreen>
         borderRadius: BorderRadius.circular(10),
       ),
       child: const Icon(
-        Icons.store_rounded,
+        TablerIcons.building_store,
         color: AppColors.primary,
         size: 20,
       ),
@@ -1947,7 +1948,7 @@ class _MapScreenState extends State<MapScreen>
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: const Icon(
-                            Icons.storefront_rounded,
+                            TablerIcons.building_store,
                             color: AppColors.primary,
                             size: 18,
                           ),
@@ -1960,7 +1961,7 @@ class _MapScreenState extends State<MapScreen>
                           _fetchingRoute = false;
                           _routePoints = [];
                         }),
-                        child: Icon(Icons.close_rounded, color: textSecondary),
+                        child: Icon(TablerIcons.x, color: textSecondary),
                       ),
                     ],
                   ),
@@ -1984,7 +1985,7 @@ class _MapScreenState extends State<MapScreen>
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             const Icon(
-                              Icons.eco_rounded,
+                              TablerIcons.leaf,
                               color: AppColors.primary,
                               size: 16,
                             ),
@@ -2018,8 +2019,8 @@ class _MapScreenState extends State<MapScreen>
                           children: [
                             Icon(
                               withinRange
-                                  ? Icons.check_circle_rounded
-                                  : Icons.near_me_rounded,
+                                  ? TablerIcons.circle_check
+                                  : TablerIcons.navigation,
                               color: withinRange
                                   ? const Color(0xFF4A9955)
                                   : textSecondary,
@@ -2132,7 +2133,7 @@ class _MapScreenState extends State<MapScreen>
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: const Icon(
-                    Icons.landscape_rounded,
+                    TablerIcons.mountain,
                     color: AppColors.primary,
                     size: 18,
                   ),
@@ -2140,7 +2141,7 @@ class _MapScreenState extends State<MapScreen>
               ),
               GestureDetector(
                 onTap: () => setState(() => _selectedPoi = null),
-                child: Icon(Icons.close_rounded, color: textSecondary),
+                child: Icon(TablerIcons.x, color: textSecondary),
               ),
             ],
           ),
@@ -2165,7 +2166,7 @@ class _MapScreenState extends State<MapScreen>
                     color: AppColors.primary.withAlpha(20),
                     alignment: Alignment.center,
                     child: const Icon(
-                      Icons.image_not_supported_rounded,
+                      TablerIcons.photo_off,
                       color: AppColors.primary,
                     ),
                   ),
@@ -2184,7 +2185,7 @@ class _MapScreenState extends State<MapScreen>
           Row(
             children: [
               _chip(
-                icon: Icons.near_me_rounded,
+                icon: TablerIcons.navigation,
                 label: withinRange ? 'En rango' : '${poi.distanceM}m',
                 bg: withinRange
                     ? const Color(0xFF4A9955).withAlpha(20)
@@ -2193,7 +2194,7 @@ class _MapScreenState extends State<MapScreen>
               ),
               const SizedBox(width: 8),
               _chip(
-                icon: Icons.eco_rounded,
+                icon: TablerIcons.leaf,
                 label: '+${poi.rewardCoins} / +${poi.rewardXp} XP',
                 bg: AppColors.primary.withAlpha(20),
                 fg: AppColors.primary,
@@ -2216,7 +2217,7 @@ class _MapScreenState extends State<MapScreen>
                         color: Colors.white,
                       ),
                     )
-                  : const Icon(Icons.redeem_rounded, size: 20),
+                  : const Icon(TablerIcons.gift, size: 20),
               label: Text(
                 withinRange
                     ? 'Reclamar recompensa'
@@ -2302,7 +2303,7 @@ class _MapScreenState extends State<MapScreen>
               ),
               GestureDetector(
                 onTap: () => setState(() => _selectedSpawn = null),
-                child: Icon(Icons.close_rounded, color: textSecondary),
+                child: Icon(TablerIcons.x, color: textSecondary),
               ),
             ],
           ),
@@ -2321,7 +2322,7 @@ class _MapScreenState extends State<MapScreen>
                   color: const Color(0xFF7C4DFF).withAlpha(24),
                   alignment: Alignment.center,
                   child: const Icon(
-                    Icons.image_not_supported_rounded,
+                    TablerIcons.photo_off,
                     color: Color(0xFF7C4DFF),
                   ),
                 ),
@@ -2332,7 +2333,7 @@ class _MapScreenState extends State<MapScreen>
           Row(
             children: [
               _chip(
-                icon: Icons.auto_awesome,
+                icon: TablerIcons.sparkles,
                 label: alreadyClaimed
                     ? 'Ya reclamado'
                     : '+${spawn.rewardCoins} coins',
@@ -2341,7 +2342,7 @@ class _MapScreenState extends State<MapScreen>
               ),
               const SizedBox(width: 8),
               _chip(
-                icon: Icons.near_me_rounded,
+                icon: TablerIcons.navigation,
                 label: withinRange ? 'En rango' : '${spawn.distanceM}m',
                 bg: withinRange
                     ? const Color(0xFF4A9955).withAlpha(20)
@@ -2367,7 +2368,7 @@ class _MapScreenState extends State<MapScreen>
                         color: Colors.white,
                       ),
                     )
-                  : const Icon(Icons.inventory_2_rounded, size: 20),
+                  : const Icon(TablerIcons.box, size: 20),
               label: Text(
                 alreadyClaimed
                     ? 'Reclamado'
@@ -2410,7 +2411,7 @@ class _MapScreenState extends State<MapScreen>
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.explore_rounded, color: AppColors.primary, size: 16),
+          const Icon(TablerIcons.compass, color: AppColors.primary, size: 16),
           const SizedBox(width: 6),
           Text(
             'Explorado ${_exploredTiles.length} · Misiones $completed/${_missions.length}',
@@ -2462,7 +2463,7 @@ class _MapScreenState extends State<MapScreen>
       color: AppColors.primary.withAlpha(15),
       child: const Center(
         child: Icon(
-          Icons.store_mall_directory_rounded,
+          TablerIcons.building_store,
           color: AppColors.primary,
           size: 36,
         ),
@@ -2485,8 +2486,8 @@ class _MapScreenState extends State<MapScreen>
             )
           : Icon(
               _showingRoute
-                  ? Icons.alt_route_rounded
-                  : Icons.directions_walk_rounded,
+                  ? TablerIcons.route_alt_left
+                  : TablerIcons.walk,
               size: 20,
             ),
       label: Text(
@@ -2518,7 +2519,7 @@ class _MapScreenState extends State<MapScreen>
                 color: Colors.white,
               ),
             )
-          : const Icon(Icons.qr_code_scanner_rounded, size: 20),
+          : const Icon(TablerIcons.scan, size: 20),
       label: Text(
         _isCheckingIn
             ? 'Verificando...'
@@ -2536,7 +2537,7 @@ class _MapScreenState extends State<MapScreen>
   Widget _buildAlreadyCheckedButton(Color textSecondary) {
     return ElevatedButton.icon(
       onPressed: null,
-      icon: const Icon(Icons.check_circle_rounded, size: 20),
+      icon: const Icon(TablerIcons.circle_check, size: 20),
       label: const Text('Ya reclamaste este comercio hoy'),
       style: ElevatedButton.styleFrom(
         backgroundColor: textSecondary,

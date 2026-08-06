@@ -4,6 +4,7 @@ import '../models/models.dart';
 import '../services/api_service.dart';
 import '../theme/app_theme.dart';
 import 'business_profile_screen.dart';
+import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 
 class RewardsScreen extends StatefulWidget {
   const RewardsScreen({super.key});
@@ -156,7 +157,7 @@ class _RewardsScreenState extends State<RewardsScreen>
           mainAxisSize: MainAxisSize.min,
           children: [
             const Icon(
-              Icons.cloud_off_rounded,
+              TablerIcons.cloud_off,
               size: 56,
               color: AppColors.primary,
             ),
@@ -213,7 +214,7 @@ class _RewardsScreenState extends State<RewardsScreen>
                   ),
                 ],
               ),
-              const Icon(Icons.help_outline, color: Color(0xFF0D1B2A)),
+              const Icon(TablerIcons.help_circle, color: Color(0xFF0D1B2A)),
             ],
           ),
         ),
@@ -243,7 +244,7 @@ class _RewardsScreenState extends State<RewardsScreen>
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(
-                        Icons.emoji_events,
+                        TablerIcons.trophy,
                         color: Color(0xFFEAA610),
                         size: 36,
                       ),
@@ -302,7 +303,7 @@ class _RewardsScreenState extends State<RewardsScreen>
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       const Icon(
-                        Icons.local_fire_department,
+                        TablerIcons.flame,
                         color: Color(0xFF5C3600),
                         size: 20,
                       ),
@@ -354,7 +355,7 @@ class _RewardsScreenState extends State<RewardsScreen>
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: const [
-                  Icon(Icons.local_offer_rounded, size: 14),
+                  Icon(TablerIcons.tag, size: 14),
                   SizedBox(width: 4),
                   Text('Ofertas'),
                 ],
@@ -365,7 +366,7 @@ class _RewardsScreenState extends State<RewardsScreen>
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: const [
-                  Icon(Icons.history_rounded, size: 14),
+                  Icon(TablerIcons.history, size: 14),
                   SizedBox(width: 4),
                   Text('Historial'),
                 ],
@@ -394,7 +395,7 @@ class _RewardsScreenState extends State<RewardsScreen>
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
-                Icons.local_offer_rounded,
+                TablerIcons.tag,
                 size: 64,
                 color: textSecondary.withAlpha(80),
               ),
@@ -572,7 +573,7 @@ class _RewardsScreenState extends State<RewardsScreen>
                       child: business.imageUrl != null
                           ? Image.network(business.imageUrl!, fit: BoxFit.cover)
                           : const Icon(
-                              Icons.store,
+                              TablerIcons.building_store,
                               color: Colors.grey,
                               size: 20,
                             ),
@@ -595,7 +596,7 @@ class _RewardsScreenState extends State<RewardsScreen>
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         const Icon(
-                          Icons.emoji_events,
+                          TablerIcons.trophy,
                           color: Color(0xFF4CAF50),
                           size: 12,
                         ),
@@ -656,7 +657,7 @@ class _RewardsScreenState extends State<RewardsScreen>
                             Row(
                               children: [
                                 Icon(
-                                  Icons.local_offer,
+                                  TablerIcons.tag,
                                   size: 13,
                                   color: Colors.blue.shade400,
                                 ),
@@ -678,7 +679,7 @@ class _RewardsScreenState extends State<RewardsScreen>
                             Row(
                               children: [
                                 Icon(
-                                  Icons.location_on,
+                                  TablerIcons.map_pin,
                                   size: 13,
                                   color: Colors.grey.shade600,
                                 ),
@@ -710,7 +711,7 @@ class _RewardsScreenState extends State<RewardsScreen>
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Icon(
-                                    Icons.schedule,
+                                    TablerIcons.clock,
                                     size: 11,
                                     color: Colors.blue.shade600,
                                   ),
@@ -793,7 +794,7 @@ class _RewardsScreenState extends State<RewardsScreen>
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
-                isPending ? Icons.qr_code_2_rounded : Icons.history_rounded,
+                isPending ? TablerIcons.qrcode : TablerIcons.history,
                 size: 64,
                 color: textSecondary.withAlpha(80),
               ),
@@ -853,15 +854,15 @@ class _RewardsScreenState extends State<RewardsScreen>
     if (isPending) {
       statusColor = AppColors.primary;
       statusLabel = 'Activo';
-      statusIcon = Icons.qr_code_2_rounded;
+      statusIcon = TablerIcons.qrcode;
     } else if (isValidated) {
       statusColor = const Color(0xFF4A9955);
       statusLabel = 'Validado';
-      statusIcon = Icons.check_circle_rounded;
+      statusIcon = TablerIcons.circle_check;
     } else {
       statusColor = Colors.grey;
       statusLabel = 'Expirado';
-      statusIcon = Icons.timer_off_rounded;
+      statusIcon = TablerIcons.clock_off;
     }
 
     return Container(
@@ -949,7 +950,7 @@ class _RewardsScreenState extends State<RewardsScreen>
             Row(
               children: [
                 const Icon(
-                  Icons.emoji_events_rounded,
+                  TablerIcons.trophy,
                   color: AppColors.primaryLight,
                   size: 15,
                 ),
@@ -1024,7 +1025,7 @@ class _RewardsScreenState extends State<RewardsScreen>
       height: 44,
       color: AppColors.primary.withAlpha(20),
       child: const Icon(
-        Icons.store_mall_directory_rounded,
+        TablerIcons.building_store,
         color: AppColors.primary,
         size: 22,
       ),

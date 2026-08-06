@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/models.dart';
 import '../theme/app_theme.dart';
+import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 
 class WeeklyActivityScreen extends StatelessWidget {
   final WeeklyActivitySummary weekly;
@@ -64,7 +65,7 @@ class WeeklyActivityScreen extends StatelessWidget {
               children: [
                 Expanded(
                   child: _buildSummaryCard(
-                    icon: Icons.directions_walk_rounded,
+                    icon: TablerIcons.walk,
                     iconColor: const Color(0xFF1877F2),
                     value: weekly.totalSteps.toString().replaceAllMapped(
                         RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
@@ -78,7 +79,7 @@ class WeeklyActivityScreen extends StatelessWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: _buildSummaryCard(
-                    icon: Icons.map_rounded,
+                    icon: TablerIcons.map,
                     iconColor: const Color(0xFF20D4A4),
                     value: weekly.totalDistanceKm.toStringAsFixed(0),
                     unit: 'km\nDistancia',
@@ -94,7 +95,7 @@ class WeeklyActivityScreen extends StatelessWidget {
               children: [
                 Expanded(
                   child: _buildSummaryCard(
-                    icon: Icons.local_fire_department_rounded,
+                    icon: TablerIcons.flame,
                     iconColor: const Color(0xFFFF6B00),
                     value: weekly.totalCaloriesKcal != null
                         ? weekly.totalCaloriesKcal!.toStringAsFixed(0).replaceAllMapped(
@@ -110,7 +111,7 @@ class WeeklyActivityScreen extends StatelessWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: _buildSummaryCard(
-                    icon: Icons.check_circle_outline_rounded,
+                    icon: TablerIcons.circle_check,
                     iconColor: const Color(0xFF00C2FF),
                     value: '${weekly.exerciseDaysCompleted}',
                     unit: 'días\nEjercicio cumplidos',
@@ -154,7 +155,7 @@ class WeeklyActivityScreen extends StatelessWidget {
                         shape: BoxShape.circle,
                       ),
                       child: const Center(
-                        child: Icon(Icons.person_rounded, size: 18, color: Color(0xFF7A4A00)),
+                        child: Icon(TablerIcons.user, size: 18, color: Color(0xFF7A4A00)),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -290,7 +291,7 @@ class WeeklyActivityScreen extends StatelessWidget {
                     color: Color(0xFF129B85),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.check_rounded, color: Colors.white, size: 18),
+                  child: const Icon(TablerIcons.check, color: Colors.white, size: 18),
                 ),
               ] else ...[
                 CircularProgressIndicator(

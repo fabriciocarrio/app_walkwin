@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 
 class StepsCoinsWidget extends StatefulWidget {
   final int steps;
@@ -153,7 +154,7 @@ class _StepsCoinsWidgetState extends State<StepsCoinsWidget>
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(
-                        Icons.directions_walk,
+                        TablerIcons.walk,
                         color: accentColor,
                         size: 28,
                       ),
@@ -212,7 +213,7 @@ class _StepsCoinsWidgetState extends State<StepsCoinsWidget>
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Icon(
-                        Icons.monetization_on,
+                        TablerIcons.coin,
                         color: Color(0xFFFFD700),
                         size: 28,
                       ),
@@ -279,7 +280,7 @@ class _StepsCoinsWidgetState extends State<StepsCoinsWidget>
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.directions_walk, color: accentColor, size: 20),
+                  Icon(TablerIcons.walk, color: accentColor, size: 20),
                   const SizedBox(width: 6),
                   Text(
                     '${widget.steps}',
@@ -304,7 +305,7 @@ class _StepsCoinsWidgetState extends State<StepsCoinsWidget>
               mainAxisSize: MainAxisSize.min,
               children: [
                 const Icon(
-                  Icons.monetization_on,
+                  TablerIcons.coin,
                   color: Color(0xFFFFD700),
                   size: 20,
                 ),

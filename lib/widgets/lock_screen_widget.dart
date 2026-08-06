@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:walkwin_app/widgets/steps_coins_widget.dart';
+import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 
 /// Widget para pantalla de bloqueo (lock screen widget)
 /// Versión minimalista y compacta diseñada específicamente para lock screen
@@ -39,7 +40,7 @@ class LockScreenStepsCoinsWidget extends StatelessWidget {
           Row(
             children: [
               const Icon(
-                Icons.directions_walk,
+                TablerIcons.walk,
                 size: 18,
                 color: Color(0xFF6366F1),
               ),
@@ -107,7 +108,7 @@ class LockScreenStepsCoinsWidget extends StatelessWidget {
                         ),
                         const SizedBox(width: 4),
                         const Icon(
-                          Icons.monetization_on,
+                          TablerIcons.coin,
                           color: Color(0xFFFFD700),
                           size: 20,
                         ),

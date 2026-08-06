@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../services/api_service.dart';
+import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -79,7 +80,7 @@ class _SplashScreenState extends State<SplashScreen> {
                           alignment: Alignment.center,
                           children: [
                             const Icon(
-                              Icons.location_on,
+                              TablerIcons.map_pin,
                               size: 48,
                               color: Color(
                                 0xFF20D4A4,

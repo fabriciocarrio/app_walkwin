@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
 import '../services/api_service.dart';
+import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 
 class ReferralsScreen extends StatefulWidget {
   const ReferralsScreen({super.key});
@@ -67,7 +68,7 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
       SnackBar(
         content: const Row(
           children: [
-            Icon(Icons.share_rounded, color: Colors.white, size: 16),
+            Icon(TablerIcons.share, color: Colors.white, size: 16),
             SizedBox(width: 8),
             Text('Texto copiado ¡compártilo por WhatsApp!'),
           ],
@@ -119,7 +120,7 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
                     ),
                     child: Column(
                       children: [
-                        const Icon(Icons.group_add_rounded, color: Colors.white, size: 52),
+                        const Icon(TablerIcons.user_plus, color: Colors.white, size: 52),
                         const SizedBox(height: 12),
                         Text(
                           'Invitá amigos',
@@ -148,14 +149,14 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
                     children: [
                       Expanded(child: _buildStatCard(
                         card: card, isDark: isDark,
-                        icon: Icons.person_add_rounded,
+                        icon: TablerIcons.user_plus,
                         value: '$_invitedCount',
                         label: 'Amigos invitados',
                       )),
                       const SizedBox(width: 12),
                       Expanded(child: _buildStatCard(
                         card: card, isDark: isDark,
-                        icon: Icons.star_rounded,
+                        icon: TablerIcons.star_filled,
                         value: '$_inviterPe',
                         label: 'PE por invitado',
                       )),
@@ -218,7 +219,7 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
                               Expanded(
                                 child: ElevatedButton.icon(
                                   onPressed: _copyCode,
-                                  icon: const Icon(Icons.copy_rounded, size: 18),
+                                  icon: const Icon(TablerIcons.copy, size: 18),
                                   label: const Text('Copiar'),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: AppColors.primary,
@@ -235,7 +236,7 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
                               Expanded(
                                 child: ElevatedButton.icon(
                                   onPressed: _shareCode,
-                                  icon: const Icon(Icons.share_rounded, size: 18),
+                                  icon: const Icon(TablerIcons.share, size: 18),
                                   label: const Text('Compartir'),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: const Color(0xFF10B981),
@@ -308,7 +309,7 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
                       ),
                       child: Column(
                         children: [
-                          Icon(Icons.refresh_rounded, color: textSecondary, size: 40),
+                          Icon(TablerIcons.refresh, color: textSecondary, size: 40),
                           const SizedBox(height: 12),
                           Text(
                             'No se pudo cargar tu código',
@@ -330,7 +331,7 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
                               setState(() => _loading = true);
                               _loadReferralInfo();
                             },
-                            icon: const Icon(Icons.refresh_rounded, size: 16),
+                            icon: const Icon(TablerIcons.refresh, size: 16),
                             label: const Text('Reintentar'),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.primary,

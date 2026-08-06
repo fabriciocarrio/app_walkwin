@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 
 class LevelProgressScreen extends StatelessWidget {
   static const int _defaultMaxLevel = 30;
@@ -225,7 +226,7 @@ class LevelProgressScreen extends StatelessWidget {
               color: Color(0xFF1877F2),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.star_rounded, color: Colors.white, size: 24),
+            child: const Icon(TablerIcons.star_filled, color: Colors.white, size: 24),
           ),
           const SizedBox(width: 16),
           Expanded(

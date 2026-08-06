@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../services/api_service.dart';
 import '../theme/app_theme.dart';
 import 'home_shell.dart';
+import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -124,8 +125,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       suffix: IconButton(
                         icon: Icon(
                           _obscurePassword
-                              ? Icons.visibility_off_outlined
-                              : Icons.visibility_outlined,
+                              ? TablerIcons.eye_off
+                              : TablerIcons.eye,
                           color: subtitleColor,
                           size: 22,
                         ),
@@ -250,7 +251,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 alignment: Alignment.center,
                 children: [
                   const Icon(
-                    Icons.location_on,
+                    TablerIcons.map_pin,
                     size: 36,
                     color: Color(0xFF20D4A4), // Cyan/Green color of the pin
                   ),

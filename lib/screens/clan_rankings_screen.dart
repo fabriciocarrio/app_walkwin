@@ -3,6 +3,7 @@ import '../models/models.dart';
 import '../services/api_service.dart';
 import '../theme/app_theme.dart';
 import 'clan_detail_screen.dart';
+import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 
 class ClanRankingsScreen extends StatefulWidget {
   const ClanRankingsScreen({super.key});
@@ -113,7 +114,7 @@ class _ClanRankingsScreenState extends State<ClanRankingsScreen>
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.emoji_events_rounded, size: 64, color: textSecondary),
+                      Icon(TablerIcons.trophy, size: 64, color: textSecondary),
                       const SizedBox(height: 16),
                       Text('Sin clanes en este departamento', style: TextStyle(color: textSecondary)),
                     ],
@@ -158,7 +159,7 @@ class _ClanRankingsScreenState extends State<ClanRankingsScreen>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.public_rounded, size: 64, color: textSecondary),
+            Icon(TablerIcons.world, size: 64, color: textSecondary),
             const SizedBox(height: 16),
             Text('Sin clanes aún', style: TextStyle(color: textSecondary)),
           ],
@@ -206,7 +207,7 @@ class _ClanRankingsScreenState extends State<ClanRankingsScreen>
                 ),
                 child: Center(
                   child: isKing
-                      ? const Icon(Icons.emoji_events_rounded, color: Color(0xFFFFB800), size: 22)
+                      ? const Icon(TablerIcons.trophy, color: Color(0xFFFFB800), size: 22)
                       : Text(
                           '${entry.rank}',
                           style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w800, fontSize: 16),
@@ -237,11 +238,11 @@ class _ClanRankingsScreenState extends State<ClanRankingsScreen>
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        Icon(Icons.location_on_rounded, size: 12, color: textSecondary),
+                        Icon(TablerIcons.map_pin, size: 12, color: textSecondary),
                         const SizedBox(width: 2),
                         Text(entry.department, style: TextStyle(color: textSecondary, fontSize: 11)),
                         const SizedBox(width: 12),
-                        Icon(Icons.people_rounded, size: 12, color: textSecondary),
+                        Icon(TablerIcons.users, size: 12, color: textSecondary),
                         const SizedBox(width: 2),
                         Text('${entry.memberCount}', style: TextStyle(color: textSecondary, fontSize: 11)),
                       ],

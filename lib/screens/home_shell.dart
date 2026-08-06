@@ -8,6 +8,7 @@ import 'settings_screen.dart';
 import '../models/models.dart';
 import '../theme/app_theme.dart';
 import '../services/websocket_service.dart';
+import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
@@ -99,7 +100,7 @@ class _HomeShellState extends State<HomeShell> {
                       children: [
                         Expanded(
                           child: _NavItem(
-                            icon: Icons.home_rounded,
+                            icon: TablerIcons.home,
                             label: 'Inicio',
                             selected: _currentIndex == 0,
                             onTap: () => setState(() => _currentIndex = 0),
@@ -108,7 +109,7 @@ class _HomeShellState extends State<HomeShell> {
                         ),
                         Expanded(
                           child: _NavItem(
-                            icon: Icons.auto_awesome_motion_rounded,
+                            icon: TablerIcons.backpack,
                             label: 'Colección',
                             selected: _currentIndex == 1,
                             onTap: () => setState(() => _currentIndex = 1),
@@ -119,7 +120,7 @@ class _HomeShellState extends State<HomeShell> {
                         const SizedBox(width: 72),
                         Expanded(
                           child: _NavItem(
-                            icon: Icons.card_giftcard_rounded,
+                            icon: TablerIcons.gift,
                             label: 'Premios',
                             selected: _currentIndex == 3,
                             onTap: () => setState(() => _currentIndex = 3),
@@ -128,7 +129,7 @@ class _HomeShellState extends State<HomeShell> {
                         ),
                         Expanded(
                           child: _NavItem(
-                            icon: Icons.person_rounded,
+                            icon: TablerIcons.user,
                             label: 'Perfil',
                             selected: _currentIndex == 4,
                             onTap: () => setState(() => _currentIndex = 4),
@@ -191,7 +192,7 @@ class _MapNavButton extends StatelessWidget {
           ],
         ),
         child: const Icon(
-          Icons.fmd_good_rounded,
+          TablerIcons.map_pin,
           size: 35,
           color: Colors.white,
         ),

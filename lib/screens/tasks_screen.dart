@@ -2,25 +2,26 @@ import 'package:flutter/material.dart';
 import '../models/models.dart';
 import '../services/api_service.dart';
 import '../theme/app_theme.dart';
+import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 
 class TasksScreen extends StatefulWidget {
   const TasksScreen({super.key});
 
   static const typeMeta = {
     'steps': {
-      'icon': Icons.directions_walk_rounded,
+      'icon': TablerIcons.walk,
       'label': 'Pasos',
       'desc': 'Caminá y acumulá pasos para completar objetivos',
       'color': Color(0xFF207AF5),
     },
     'exploration': {
-      'icon': Icons.explore_rounded,
+      'icon': TablerIcons.compass,
       'label': 'Exploración',
       'desc': 'Visitá lugares y descubrí la ciudad',
       'color': Color(0xFF20D4A4),
     },
     'collectible': {
-      'icon': Icons.collections_bookmark_rounded,
+      'icon': TablerIcons.book_2,
       'label': 'Coleccionables',
       'desc': 'Encontrá y coleccioná objetos especiales',
       'color': Color(0xFFFF6B00),
@@ -145,7 +146,7 @@ class _TasksScreenState extends State<TasksScreen> {
                           child: Row(
                             children: [
                               const Icon(
-                                Icons.flag_rounded,
+                                TablerIcons.flag,
                                 color: Colors.white,
                                 size: 24,
                               ),
@@ -203,7 +204,7 @@ class _TasksScreenState extends State<TasksScreen> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Icon(
-                                Icons.assignment_rounded,
+                                TablerIcons.checklist,
                                 size: 56,
                                 color: textSecondary,
                               ),
@@ -271,7 +272,7 @@ class _TasksScreenState extends State<TasksScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             const Icon(
-              Icons.cloud_off_rounded,
+              TablerIcons.cloud_off,
               size: 56,
               color: AppColors.primary,
             ),
@@ -401,7 +402,7 @@ class _MissionCard extends StatelessWidget {
 
   IconData get _typeIcon {
     final meta = TasksScreen.typeMeta[mission.missionType];
-    return meta?['icon'] as IconData? ?? Icons.assignment_rounded;
+    return meta?['icon'] as IconData? ?? TablerIcons.checklist;
   }
 
   @override
@@ -439,7 +440,7 @@ class _MissionCard extends StatelessWidget {
                 ),
                 child: Icon(
                   mission.isCompleted
-                      ? Icons.check_rounded
+                      ? TablerIcons.check
                       : _typeIcon,
                   color: typeColor,
                   size: 18,
@@ -476,7 +477,7 @@ class _MissionCard extends StatelessWidget {
                 ),
               ),
               if (mission.isCompleted)
-                Icon(Icons.check_circle_rounded, color: typeColor, size: 20),
+                Icon(TablerIcons.circle_check, color: typeColor, size: 20),
             ],
           ),
           const SizedBox(height: 10),
@@ -523,7 +524,7 @@ class _MissionCard extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       const Icon(
-                        Icons.monetization_on,
+                        TablerIcons.coin,
                         size: 14,
                         color: AppColors.primary,
                       ),
@@ -552,7 +553,7 @@ class _MissionCard extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.star, size: 14, color: Colors.orange),
+                      const Icon(TablerIcons.star_filled, size: 14, color: Colors.orange),
                       const SizedBox(width: 4),
                       Text(
                         '${mission.rewardXp} XP',

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -53,7 +54,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   alignment: Alignment.center,
                   children: [
                     const Icon(
-                      Icons.location_on,
+                      TablerIcons.map_pin,
                       size: 28,
                       color: Color(0xFF1B628B), // A blue matching the logo pin
                     ),
@@ -292,7 +293,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 subtitle: 'Obtené beneficios en\ncomercios de tu barrio.',
               ),
               _buildFeaturePageContent(
-                icon: Icons.explore_rounded,
+                icon: TablerIcons.compass,
                 iconColor: const Color(0xFF1B628B),
                 backgroundImage: 'assets/onboarding3.png',
                 gradient: const LinearGradient(
@@ -308,13 +309,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 subtitle:
                     'Descubrí puntos de interés, negocios y coleccionables cerca tuyo.',
                 highlights: const [
-                  (icon: Icons.map_rounded, label: 'Mapa vivo'),
-                  (icon: Icons.place_rounded, label: 'POIs cercanos'),
-                  (icon: Icons.diamond_rounded, label: 'Coleccionables'),
+                  (icon: TablerIcons.map, label: 'Mapa vivo'),
+                  (icon: TablerIcons.map_pin, label: 'POIs cercanos'),
+                  (icon: TablerIcons.diamond, label: 'Coleccionables'),
                 ],
               ),
               _buildFeaturePageContent(
-                icon: Icons.emoji_events_rounded,
+                icon: TablerIcons.trophy,
                 iconColor: const Color(0xFFF59E0B),
                 backgroundImage: 'assets/onboarding4.png',
                 gradient: const LinearGradient(
@@ -330,9 +331,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 subtitle:
                     'Completá misiones, desbloqueá logros y escalá en los rankings.',
                 highlights: const [
-                  (icon: Icons.flag_rounded, label: 'Misiones'),
-                  (icon: Icons.military_tech_rounded, label: 'Logros'),
-                  (icon: Icons.leaderboard_rounded, label: 'Ranking'),
+                  (icon: TablerIcons.flag, label: 'Misiones'),
+                  (icon: TablerIcons.military_award, label: 'Logros'),
+                  (icon: TablerIcons.podium, label: 'Ranking'),
                 ],
               ),
             ],
@@ -400,7 +401,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                               color: Color(0xFF007AFF),
                             ),
                             child: const Icon(
-                              Icons.arrow_forward,
+                              TablerIcons.arrow_right,
                               color: Colors.white,
                               size: 28,
                             ),

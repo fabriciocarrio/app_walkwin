@@ -6,6 +6,7 @@ import '../services/notification_service.dart';
 import '../services/websocket_service.dart';
 import '../theme/app_theme.dart';
 import 'collectible_detail_screen.dart';
+import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 
 class CollectionScreen extends StatefulWidget {
   const CollectionScreen({super.key});
@@ -56,7 +57,7 @@ class _CollectionScreenState extends State<CollectionScreen>
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.emoji_events, color: AppColors.primary, size: 56),
+            const Icon(TablerIcons.trophy, color: AppColors.primary, size: 56),
             const SizedBox(height: 12),
             const Text(
               '¡Logro Desbloqueado!',
@@ -74,14 +75,14 @@ class _CollectionScreenState extends State<CollectionScreen>
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   if (rewardCoins is int && rewardCoins > 0) ...[
-                    const Icon(Icons.monetization_on, color: AppColors.coinGold, size: 20),
+                    const Icon(TablerIcons.coin, color: AppColors.coinGold, size: 20),
                     const SizedBox(width: 4),
                     Text('+$rewardCoins',
                       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                     const SizedBox(width: 16),
                   ],
                   if (rewardXp is int && rewardXp > 0) ...[
-                    const Icon(Icons.trending_up, color: AppColors.primary, size: 20),
+                    const Icon(TablerIcons.trending_up, color: AppColors.primary, size: 20),
                     const SizedBox(width: 4),
                     Text('+${rewardXp}XP',
                       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
@@ -180,7 +181,7 @@ class _CollectionScreenState extends State<CollectionScreen>
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     const Icon(
-                      Icons.error_outline,
+                      TablerIcons.alert_circle,
                       color: Colors.redAccent,
                       size: 34,
                     ),
@@ -270,7 +271,7 @@ class _CollectionScreenState extends State<CollectionScreen>
                   color: Colors.blue.withAlpha(30),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.menu_book_rounded, color: Colors.blue, size: 30),
+                child: const Icon(TablerIcons.book_2, color: Colors.blue, size: 30),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -399,7 +400,7 @@ class _CollectionScreenState extends State<CollectionScreen>
                             color: color,
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(Icons.eco, color: Colors.white, size: 20),
+                          child: const Icon(TablerIcons.leaf, color: Colors.white, size: 20),
                         ),
                         const Spacer(),
                         Text(
@@ -450,7 +451,7 @@ class _CollectionScreenState extends State<CollectionScreen>
                                 color: Colors.black.withOpacity(0.4),
                                 shape: BoxShape.circle,
                               ),
-                              child: const Icon(Icons.chevron_right, color: Colors.white, size: 24),
+                              child: const Icon(TablerIcons.chevron_right, color: Colors.white, size: 24),
                             ),
                           ],
                         ),
@@ -542,7 +543,7 @@ class _CollectionScreenState extends State<CollectionScreen>
                   const Positioned(
                     top: 6,
                     right: 6,
-                    child: Icon(Icons.vpn_key_rounded, color: Color(0xFFFFD700), size: 14),
+                    child: Icon(TablerIcons.key, color: Color(0xFFFFD700), size: 14),
                   ),
                 if (item.quantity > 1)
                   Positioned(
@@ -558,7 +559,7 @@ class _CollectionScreenState extends State<CollectionScreen>
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.content_copy_rounded, size: 10, color: Colors.white),
+                          const Icon(TablerIcons.copy, size: 10, color: Colors.white),
                           const SizedBox(width: 3),
                           Text(
                             'x${item.quantity}',
@@ -575,7 +576,7 @@ class _CollectionScreenState extends State<CollectionScreen>
               ],
             )
           : const Center(
-              child: Icon(Icons.lock_rounded, color: Colors.white70, size: 28),
+              child: Icon(TablerIcons.lock, color: Colors.white70, size: 28),
             ),
     );
   }
@@ -612,15 +613,15 @@ class _CollectionScreenState extends State<CollectionScreen>
   };
 
   static const _categoryIcons = {
-    'walker': Icons.directions_walk_rounded,
-    'streak': Icons.local_fire_department_rounded,
-    'social': Icons.store_rounded,
-    'explorer': Icons.map_rounded,
-    'collector': Icons.collections_bookmark_rounded,
-    'mission': Icons.flag_rounded,
-    'special': Icons.star_rounded,
-    'milestone': Icons.military_tech_rounded,
-    'general': Icons.emoji_events_rounded,
+    'walker': TablerIcons.walk,
+    'streak': TablerIcons.flame,
+    'social': TablerIcons.building_store,
+    'explorer': TablerIcons.map,
+    'collector': TablerIcons.book_2,
+    'mission': TablerIcons.flag,
+    'special': TablerIcons.star_filled,
+    'milestone': TablerIcons.military_award,
+    'general': TablerIcons.trophy,
   };
 
   Color _rarityColor(String rarity) {
@@ -715,7 +716,7 @@ class _CollectionScreenState extends State<CollectionScreen>
   Widget _buildCategoryHeader(String cat, List<Achievement> items, bool isDark) {
     final unlocked = items.where((a) => a.isUnlocked).length;
     final total = items.length;
-    final icon = _categoryIcons[cat] ?? Icons.emoji_events;
+    final icon = _categoryIcons[cat] ?? TablerIcons.trophy;
     final label = _categoryLabels[cat] ?? cat;
 
     return Row(
@@ -789,7 +790,7 @@ class _CollectionScreenState extends State<CollectionScreen>
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
-                  a.isUnlocked ? Icons.emoji_events : Icons.lock_outline_rounded,
+                  a.isUnlocked ? TablerIcons.trophy : TablerIcons.lock,
                   color: a.isUnlocked ? rarityColor : Colors.grey,
                   size: 20,
                 ),
@@ -851,7 +852,7 @@ class _CollectionScreenState extends State<CollectionScreen>
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       if (a.rewardCoins > 0) ...[
-                        const Icon(Icons.monetization_on, size: 14, color: AppColors.coinGold),
+                        const Icon(TablerIcons.coin, size: 14, color: AppColors.coinGold),
                         const SizedBox(width: 2),
                         Text('${a.rewardCoins}',
                           style: TextStyle(fontSize: 11, color: AppColors.coinGold, fontWeight: FontWeight.w600)),
@@ -876,7 +877,7 @@ class _CollectionScreenState extends State<CollectionScreen>
                       child: const Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.check_circle_rounded, size: 12, color: Color(0xFF10B981)),
+                          Icon(TablerIcons.circle_check, size: 12, color: Color(0xFF10B981)),
                           SizedBox(width: 3),
                           Text('Completado',
                             style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Color(0xFF10B981))),
@@ -1019,7 +1020,7 @@ class _CategoryCollectionDetailScreenState
         elevation: 0,
         actions: [
           IconButton(
-            icon: Icon(Icons.star_border_rounded, color: Colors.blue.shade300),
+            icon: Icon(TablerIcons.star_filled, color: Colors.blue.shade300),
             onPressed: () {},
           ),
         ],
@@ -1070,7 +1071,7 @@ class _CategoryCollectionDetailScreenState
                                 color: Colors.blueAccent,
                                 shape: BoxShape.circle,
                               ),
-                              child: const Icon(Icons.explore, color: Colors.white, size: 24),
+                              child: const Icon(TablerIcons.compass, color: Colors.white, size: 24),
                             ),
                             const Spacer(),
                             Text(
@@ -1239,9 +1240,9 @@ class _CategoryCollectionDetailScreenState
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.lock, color: Colors.white, size: 28),
+                    Icon(TablerIcons.lock, color: Colors.white, size: 28),
                     const SizedBox(height: 8),
-                    Icon(Icons.terrain, color: Colors.grey.shade400, size: 40),
+                    Icon(TablerIcons.mountain, color: Colors.grey.shade400, size: 40),
                   ],
                 ),
               ),
@@ -1266,7 +1267,7 @@ class _CategoryCollectionDetailScreenState
                     Row(
                       children: List.generate(
                         3,
-                        (index) => const Icon(Icons.star, color: Colors.grey, size: 10),
+                        (index) => const Icon(TablerIcons.star_filled, color: Colors.grey, size: 10),
                       ),
                     ),
                   ],
@@ -1326,7 +1327,7 @@ class _CategoryCollectionDetailScreenState
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.star, color: Colors.white, size: 8),
+                          const Icon(TablerIcons.star_filled, color: Colors.white, size: 8),
                           const SizedBox(width: 2),
                           Text(
                             rarityLabel,
@@ -1363,7 +1364,7 @@ class _CategoryCollectionDetailScreenState
                     Row(
                       children: List.generate(
                         starsCount,
-                        (index) => Icon(Icons.star, color: rarityColor, size: 10),
+                        (index) => Icon(TablerIcons.star_filled, color: rarityColor, size: 10),
                       ),
                     ),
                   ],

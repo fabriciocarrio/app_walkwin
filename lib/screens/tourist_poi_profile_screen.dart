@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/models.dart';
 import '../theme/app_theme.dart';
+import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 
 class TouristPoiProfileScreen extends StatelessWidget {
   final ExplorationPoi poi;
@@ -37,7 +38,7 @@ class TouristPoiProfileScreen extends StatelessWidget {
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
-                  Icons.arrow_back_rounded,
+                  TablerIcons.arrow_back,
                   color: Colors.white,
                 ),
               ),
@@ -72,13 +73,13 @@ class TouristPoiProfileScreen extends StatelessWidget {
                     runSpacing: 8,
                     children: [
                       _chip(
-                        icon: Icons.location_on_rounded,
+                        icon: TablerIcons.map_pin,
                         text: poi.department ?? poi.province ?? 'San Juan',
                         bg: AppColors.primary.withAlpha(20),
                         fg: AppColors.primary,
                       ),
                       _chip(
-                        icon: Icons.near_me_rounded,
+                        icon: TablerIcons.navigation,
                         text: poi.distanceM == 0
                             ? 'Muy cerca'
                             : '${poi.distanceM}m',
@@ -86,13 +87,13 @@ class TouristPoiProfileScreen extends StatelessWidget {
                         fg: textSecondary,
                       ),
                       _chip(
-                        icon: Icons.eco_rounded,
+                        icon: TablerIcons.leaf,
                         text: '+${poi.rewardCoins} Puntos Exploria',
                         bg: const Color(0xFF4A9955).withAlpha(16),
                         fg: const Color(0xFF4A9955),
                       ),
                       _chip(
-                        icon: Icons.bolt_rounded,
+                        icon: TablerIcons.bolt,
                         text: '+${poi.rewardXp} XP',
                         bg: const Color(0xFF2563EB).withAlpha(16),
                         fg: const Color(0xFF2563EB),
@@ -147,7 +148,7 @@ class TouristPoiProfileScreen extends StatelessWidget {
       color: AppColors.primary.withAlpha(18),
       child: const Center(
         child: Icon(
-          Icons.landscape_rounded,
+          TablerIcons.mountain,
           size: 72,
           color: AppColors.primary,
         ),

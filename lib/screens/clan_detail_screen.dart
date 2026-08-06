@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../models/models.dart';
 import '../services/api_service.dart';
 import '../theme/app_theme.dart';
+import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 
 class ClanDetailScreen extends StatefulWidget {
   final int clanId;
@@ -234,7 +235,7 @@ class _ClanDetailScreenState extends State<ClanDetailScreen> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.location_on_rounded, size: 16, color: Colors.white),
+                const Icon(TablerIcons.map_pin, size: 16, color: Colors.white),
                 const SizedBox(width: 4),
                 Text(_clan!.department, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
               ],
@@ -262,11 +263,11 @@ class _ClanDetailScreenState extends State<ClanDetailScreen> {
   Widget _buildStatsRow(bool isDark, Color card, Color textPrimary, Color textSecondary) {
     return Row(
       children: [
-        Expanded(child: _buildStatCard('Miembros', '${_clan!.memberCount}', Icons.people_rounded, isDark, card, textPrimary, textSecondary)),
+        Expanded(child: _buildStatCard('Miembros', '${_clan!.memberCount}', TablerIcons.users, isDark, card, textPrimary, textSecondary)),
         const SizedBox(width: 10),
-        Expanded(child: _buildStatCard('Influencia', '${_clan!.seasonInfluence}', Icons.trending_up_rounded, isDark, card, textPrimary, textSecondary)),
+        Expanded(child: _buildStatCard('Influencia', '${_clan!.seasonInfluence}', TablerIcons.trending_up, isDark, card, textPrimary, textSecondary)),
         const SizedBox(width: 10),
-        Expanded(child: _buildStatCard('Temporada', '${_clan!.daysLeftInSeason}d', Icons.calendar_today_rounded, isDark, card, textPrimary, textSecondary)),
+        Expanded(child: _buildStatCard('Temporada', '${_clan!.daysLeftInSeason}d', TablerIcons.calendar, isDark, card, textPrimary, textSecondary)),
       ],
     );
   }
@@ -300,7 +301,7 @@ class _ClanDetailScreenState extends State<ClanDetailScreen> {
         children: [
           Row(
             children: [
-              const Icon(Icons.link_rounded, size: 18, color: AppColors.primary),
+              const Icon(TablerIcons.link, size: 18, color: AppColors.primary),
               const SizedBox(width: 8),
               Text('Código de invitación', style: TextStyle(color: textPrimary, fontWeight: FontWeight.w700, fontSize: 14)),
             ],
@@ -323,7 +324,7 @@ class _ClanDetailScreenState extends State<ClanDetailScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(_clan!.invitationCode, style: TextStyle(color: AppColors.primary, fontSize: 20, fontWeight: FontWeight.w800, letterSpacing: 2)),
-                  const Icon(Icons.copy_rounded, color: AppColors.primary, size: 20),
+                  const Icon(TablerIcons.copy, color: AppColors.primary, size: 20),
                 ],
               ),
             ),
@@ -407,7 +408,7 @@ class _ClanDetailScreenState extends State<ClanDetailScreen> {
           ),
           if (_isLeader && member.role != 'leader')
             IconButton(
-              icon: const Icon(Icons.remove_circle_outline_rounded, color: AppColors.danger, size: 20),
+              icon: const Icon(TablerIcons.circle_minus, color: AppColors.danger, size: 20),
               onPressed: () async {
                 final confirm = await showDialog<bool>(
                   context: context,

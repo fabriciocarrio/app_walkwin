@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../services/api_service.dart';
 import '../theme/app_theme.dart';
 import 'home_shell.dart';
+import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -136,8 +137,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   suffix: IconButton(
                     icon: Icon(
                       _obscurePassword
-                          ? Icons.visibility_off_outlined
-                          : Icons.visibility_outlined,
+                          ? TablerIcons.eye_off
+                          : TablerIcons.eye,
                       color: subtitleColor,
                       size: 22,
                     ),
@@ -160,7 +161,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   child: Row(
                     children: [
                       Icon(
-                        _showReferral ? Icons.expand_less : Icons.expand_more,
+                        _showReferral ? TablerIcons.chevron_up : TablerIcons.chevron_down,
                         color: subtitleColor,
                         size: 20,
                       ),
@@ -201,7 +202,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                       filled: true,
                       fillColor: isDark ? AppColors.cardDark : Colors.white,
-                      prefixIcon: const Icon(Icons.card_giftcard_rounded, color: Color(0xFF10B981)),
+                      prefixIcon: const Icon(TablerIcons.gift, color: Color(0xFF10B981)),
                       errorText: _referralError,
                       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
                       border: OutlineInputBorder(
@@ -318,7 +319,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 alignment: Alignment.center,
                 children: [
                   const Icon(
-                    Icons.location_on,
+                    TablerIcons.map_pin,
                     size: 36,
                     color: Color(0xFF20D4A4),
                   ),
@@ -521,7 +522,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.card_giftcard_rounded, color: Colors.white, size: 56),
+              const Icon(TablerIcons.gift, color: Colors.white, size: 56),
               const SizedBox(height: 16),
               Text(
                 '¡Bienvenido a Exploria!',

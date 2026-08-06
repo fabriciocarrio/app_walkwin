@@ -22,6 +22,7 @@ import 'clan_list_screen.dart';
 import 'clan_detail_screen.dart';
 import 'clan_rankings_screen.dart';
 import '../config/app_config.dart';
+import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 
 class DashboardScreen extends StatefulWidget {
   final VoidCallback? onNavigateToPremios;
@@ -234,7 +235,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Row(
           children: [
-            Icon(Icons.emoji_events, color: Color(0xFFF5C535), size: 28),
+            Icon(TablerIcons.trophy, color: Color(0xFFF5C535), size: 28),
             SizedBox(width: 10),
             Expanded(
               child: Text(
@@ -837,7 +838,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     return Container(
       color: isDark ? AppColors.cardDark : const Color(0xFFE8EDF2),
       child: Icon(
-        Icons.person,
+        TablerIcons.user,
         size: 20,
         color: isDark ? AppColors.textSecondaryDark : const Color(0xFF9BABB8),
       ),
@@ -1062,7 +1063,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           children: [
             IconButton(
               icon: Icon(
-                Icons.menu,
+                TablerIcons.menu_2,
                 color: isDark
                     ? AppColors.textPrimaryDark
                     : const Color(0xFF112A46),
@@ -1149,7 +1150,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         //             alignment: Alignment.center,
         //             children: [
         //               const Icon(
-        //                 Icons.location_on,
+        //                 TablerIcons.map_pin,
         //                 size: 24,
         //                 color: Color(0xFF20D4A4),
         //               ),
@@ -1176,7 +1177,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           children: [
             IconButton(
               icon: Icon(
-                Icons.notifications_none_outlined,
+                TablerIcons.bell,
                 color: isDark
                     ? AppColors.textPrimaryDark
                     : const Color(0xFF112A46),
@@ -1383,7 +1384,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                                   borderRadius: BorderRadius.circular(16),
                                 ),
                                 child: const Icon(
-                                  Icons.star_rounded,
+                                  TablerIcons.star_filled,
                                   color: Color(0xFF22C38E),
                                   size: 20,
                                 ),
@@ -1489,7 +1490,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                 card: card,
                 title: 'Puntos Exploria',
                 accent: const Color(0xFF20D4A4),
-                icon: Icons.star_rounded,
+                icon: TablerIcons.star_filled,
                 value: _livePe.toString().replaceAllMapped(
                   RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
                   (m) => '${m[1]}.',
@@ -1508,7 +1509,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                 card: card,
                 title: 'Racha',
                 accent: const Color(0xFFFF6B00),
-                icon: Icons.local_fire_department_rounded,
+                icon: TablerIcons.flame,
                 value: '$_streak',
                 footer: _streak == 1 ? 'día seguido' : 'días seguidos',
                 footerColor: const Color(0xFFFF6B00),
@@ -1695,7 +1696,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: const Icon(
-                    Icons.shield_rounded,
+                    TablerIcons.shield,
                     color: AppColors.primary,
                     size: 24,
                   ),
@@ -1837,8 +1838,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                               ),
                               child: Icon(
                                 hasClan
-                                    ? Icons.groups_rounded
-                                    : Icons.group_add_rounded,
+                                    ? TablerIcons.users
+                                    : TablerIcons.user_plus,
                                 color: Colors.white,
                                 size: 24,
                               ),
@@ -1871,7 +1872,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                             ),
                             const SizedBox(width: 8),
                             const Icon(
-                              Icons.chevron_right_rounded,
+                              TablerIcons.chevron_right,
                               color: Colors.white70,
                               size: 20,
                             ),
@@ -1902,7 +1903,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                         child: Row(
                           children: [
                             const Icon(
-                              Icons.emoji_events_rounded,
+                              TablerIcons.trophy,
                               size: 18,
                               color: Color(0xFFFFB800),
                             ),
@@ -1917,7 +1918,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                             ),
                             const Spacer(),
                             const Icon(
-                              Icons.chevron_right_rounded,
+                              TablerIcons.chevron_right,
                               color: Colors.white70,
                               size: 18,
                             ),
@@ -1989,7 +1990,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                 ],
               ),
             ),
-            Icon(Icons.chevron_right_rounded, color: textSecondary, size: 22),
+            Icon(TablerIcons.chevron_right, color: textSecondary, size: 22),
           ],
         ),
       );
@@ -2032,21 +2033,21 @@ class _DashboardScreenState extends State<DashboardScreen>
               ),
               const SizedBox(height: 12),
               earnItem(
-                icon: Icons.card_giftcard_rounded,
+                icon: TablerIcons.gift,
                 title: 'Referidos',
                 subtitle: '+ PE inmediato',
                 tint: const Color(0xFF2E78F0),
               ),
               const SizedBox(height: 10),
               earnItem(
-                icon: Icons.casino_rounded,
+                icon: TablerIcons.dice_6,
                 title: 'Ruleta diaria',
                 subtitle: 'Hasta 100 PE',
                 tint: const Color(0xFF5A84FF),
               ),
               const SizedBox(height: 10),
               earnItem(
-                icon: Icons.stars_rounded,
+                icon: TablerIcons.stars,
                 title: 'Más formas de ganar',
                 subtitle: 'Misiones y acciones especiales',
                 tint: const Color(0xFFFFA63D),
@@ -2104,7 +2105,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                     ),
                   ),
                   const SizedBox(width: 4),
-                  Icon(Icons.chevron_right_rounded, color: textSecondary),
+                  Icon(TablerIcons.chevron_right, color: textSecondary),
                 ],
               ),
               const SizedBox(height: 24),
@@ -2163,7 +2164,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
-                    Icons.check_rounded,
+                    TablerIcons.check,
                     color: Colors.white,
                     size: 18,
                   ),
@@ -2289,15 +2290,15 @@ class _DashboardScreenState extends State<DashboardScreen>
                     final title = mission.title.toLowerCase();
 
                     if (type.contains('step') || title.contains('paso')) {
-                      iconData = Icons.directions_walk_rounded;
+                      iconData = TablerIcons.walk;
                       iconColor = const Color(0xFF22C38E);
                       bgColor = const Color(0xFF22C38E).withOpacity(0.15);
                     } else if (type.contains('poi') || title.contains('lugar')) {
-                      iconData = Icons.location_on_rounded;
+                      iconData = TablerIcons.map_pin;
                       iconColor = const Color(0xFF8B5CF6);
                       bgColor = const Color(0xFF8B5CF6).withOpacity(0.15);
                     } else {
-                      iconData = Icons.storefront_rounded;
+                      iconData = TablerIcons.building_store;
                       iconColor = const Color(0xFF3B82F6);
                       bgColor = const Color(0xFF3B82F6).withOpacity(0.15);
                     }
@@ -2367,7 +2368,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                                 const SizedBox(width: 8),
                                 if (mission.isCompleted)
                                   const Icon(
-                                    Icons.check_circle,
+                                    TablerIcons.circle_check,
                                     color: Color(0xFF22C38E),
                                     size: 20,
                                   )
@@ -2379,7 +2380,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                         ),
                         if (!mission.isCompleted) ...[
                           const SizedBox(width: 12),
-                          Icon(Icons.chevron_right_rounded, color: textSecondary, size: 20),
+                          Icon(TablerIcons.chevron_right, color: textSecondary, size: 20),
                         ],
                       ],
                     );
@@ -2521,7 +2522,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                   Row(
                     children: [
                       const Icon(
-                        Icons.star_rounded,
+                        TablerIcons.star_filled,
                         color: Color(0xFF22C38E),
                         size: 16,
                       ),
@@ -2547,7 +2548,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                       Row(
                         children: [
                           Icon(
-                            Icons.location_on,
+                            TablerIcons.map_pin,
                             color: textSecondary,
                             size: 14,
                           ),
@@ -2596,7 +2597,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       color: isDark ? AppColors.cardAltDark : const Color(0xFFCDD4E8),
       child: const Center(
         child: Icon(
-          Icons.store_rounded,
+          TablerIcons.building_store,
           size: 50,
           color: AppColors.primaryLight,
         ),
@@ -2615,7 +2616,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.store_outlined, color: textSecondary, size: 28),
+            Icon(TablerIcons.building_store, color: textSecondary, size: 28),
             const SizedBox(height: 6),
             Text(
               'No hay comercios destacados por ahora.',
@@ -2697,7 +2698,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                           ),
                           Spacer(),
                           Icon(
-                            Icons.chevron_right_rounded,
+                            TablerIcons.chevron_right,
                             color: Colors.white,
                             size: 24,
                           ),
@@ -2735,7 +2736,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                             ),
                             SizedBox(width: 6),
                             Icon(
-                              Icons.location_on_rounded,
+                              TablerIcons.map_pin,
                               color: Colors.white,
                               size: 16,
                             ),

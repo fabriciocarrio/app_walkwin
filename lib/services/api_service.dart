@@ -328,13 +328,18 @@ class ApiService {
 
   static Future<Map<String, dynamic>> redeemWithCode(
     String businessId,
-    String code,
-  ) async {
+    String code, {
+    String? offerId,
+  }) async {
     await getToken();
     final response = await http.post(
       Uri.parse('$baseUrl/redemptions/redeem-with-code'),
       headers: _headers,
-      body: jsonEncode({'business_id': businessId, 'code': code}),
+      body: jsonEncode({
+        'business_id': businessId,
+        'code': code,
+        if (offerId != null) 'offer_id': offerId,
+      }),
     );
     final data = jsonDecode(response.body) as Map<String, dynamic>;
     if (response.statusCode >= 400) {

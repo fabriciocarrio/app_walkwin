@@ -16,7 +16,6 @@ class BusinessProfileScreen extends StatefulWidget {
 class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
   int _peBalance = 0;
   bool _loadingBalance = true;
-  String? _purchasingOfferId;
 
   @override
   void initState() {
@@ -38,35 +37,168 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
     }
   }
 
-  Future<void> _purchaseOffer(BusinessOffer offer) async {
-    setState(() => _purchasingOfferId = offer.id);
-    try {
-      final result = await ApiService.purchaseCoupon(
-        widget.business.id,
-        currency: 'pe',
-        offerId: offer.id,
-      );
-      if (!mounted) return;
+  void _showRedeemSheet(BusinessOffer offer) {
+    final business = widget.business;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = isDark
+        ? AppColors.textPrimaryDark
+        : AppColors.textPrimaryLight;
+    final textSecondary = isDark
+        ? AppColors.textSecondaryDark
+        : AppColors.textSecondaryLight;
 
-      setState(() {
-        _peBalance = result['new_balance'] ?? _peBalance - offer.peCost;
-        _purchasingOfferId = null;
-      });
-      _showResultDialog(
-        success: true,
-        message: 'Cupón canjeado! Mostrá el QR en el comercio.',
-      );
-    } on ApiException catch (e) {
-      if (mounted) {
-        setState(() => _purchasingOfferId = null);
-        _showResultDialog(success: false, message: e.message);
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _purchasingOfferId = null);
-        _showResultDialog(success: false, message: e.toString());
-      }
-    }
+    final codeController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: isDark ? AppColors.cardDark : AppColors.cardLight,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            return Padding(
+              padding: EdgeInsets.fromLTRB(
+                24,
+                16,
+                24,
+                MediaQuery.of(ctx).viewInsets.bottom + 24,
+              ),
+              child: Form(
+                key: formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      'Canjeá tu premio',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Ingresá el código de 5 dígitos\nque te dio ${business.name}',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: textSecondary, fontSize: 14),
+                    ),
+                    const SizedBox(height: 24),
+                    TextFormField(
+                      controller: codeController,
+                      maxLength: 5,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 28,
+                        letterSpacing: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        counterText: '',
+                        hintText: '0 0 0 0 0',
+                        hintStyle: TextStyle(
+                          color: Colors.grey.shade300,
+                          letterSpacing: 12,
+                        ),
+                        filled: true,
+                        fillColor: Colors.grey.shade100,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 16,
+                        ),
+                      ),
+                      validator: (v) {
+                        if (v == null || v.length != 5) {
+                          return 'Ingresá el código completo';
+                        }
+                        if (!RegExp(r'^\d{5}$').hasMatch(v)) {
+                          return 'Solo números';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          if (!formKey.currentState!.validate()) return;
+                          setSheetState(() {});
+                          try {
+                            final result = await ApiService.redeemWithCode(
+                              business.id,
+                              codeController.text.trim(),
+                              offerId: offer.id,
+                            );
+                            if (!ctx.mounted) return;
+                            Navigator.pop(ctx);
+                            if (!mounted) return;
+                            setState(() {
+                              _peBalance =
+                                  (result['new_balance'] as num?)?.toInt() ??
+                                      _peBalance;
+                            });
+                            _showResultDialog(
+                              success: true,
+                              message:
+                                  '¡Cupón canjeado en ${business.name}!',
+                            );
+                          } catch (e) {
+                            if (ctx.mounted) {
+                              ScaffoldMessenger.of(ctx).showSnackBar(
+                                SnackBar(
+                                  content: Text(e.toString()),
+                                  backgroundColor: Colors.red.shade700,
+                                  behavior: SnackBarBehavior.floating,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                              );
+                            }
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF1A67F8),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          'Canjear',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   void _showResultDialog({required bool success, required String message}) {
@@ -410,7 +542,6 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
     required Color textSecondary,
   }) {
     final canRedeem = _peBalance >= offer.peCost && !offer.isSoldOut;
-    final isPurchasing = _purchasingOfferId == offer.id;
 
     return Container(
       decoration: BoxDecoration(
@@ -554,9 +685,7 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
                 SizedBox(
                   height: 40,
                   child: ElevatedButton(
-                    onPressed: (canRedeem && !isPurchasing)
-                        ? () => _purchaseOffer(offer)
-                        : null,
+                    onPressed: canRedeem ? () => _showRedeemSheet(offer) : null,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: canRedeem
                           ? const Color(0xFFE8A020)
@@ -567,26 +696,17 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
                       ),
                       padding: const EdgeInsets.symmetric(horizontal: 18),
                     ),
-                    child: isPurchasing
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : Text(
-                            offer.isSoldOut
-                                ? 'Sin stock'
-                                : canRedeem
-                                    ? 'Canjear'
-                                    : 'PE insuficientes',
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
+                    child: Text(
+                      offer.isSoldOut
+                          ? 'Sin stock'
+                          : canRedeem
+                              ? 'Canjear'
+                              : 'PE insuficientes',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ),
                 ),
               ],

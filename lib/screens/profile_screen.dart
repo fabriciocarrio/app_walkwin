@@ -28,7 +28,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _loading = true;
   bool _saving = false;
   String? _selectedAvatar;
-  String? _originalAvatar;
   List<String> _provinces = [];
   String? _selectedProvince;
   bool _loadingProvinces = true;
@@ -63,7 +62,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _weightController.text = data['weight_kg']?.toString() ?? '';
         _heightController.text = data['height_cm']?.toString() ?? '';
         _selectedAvatar = data['avatar']?.toString();
-        _originalAvatar = data['avatar']?.toString();
         _selectedProvince = data['province']?.toString();
         _loading = false;
       });
@@ -134,7 +132,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
               behavior: SnackBarBehavior.floating,
             ),
           );
-          Navigator.of(context).pop(true);
+          if (Navigator.of(context).canPop()) {
+            Navigator.of(context).pop(true);
+          }
         } else {
           _showError(result['message'] ?? 'Error al guardar');
         }
@@ -311,12 +311,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             final isDark = Theme.of(context).brightness == Brightness.dark;
             final bg = isDark ? AppColors.bgDark : AppColors.bgLight;
             final card = isDark ? AppColors.cardDark : AppColors.cardLight;
-            final textPrimary = isDark
-                ? AppColors.textPrimaryDark
-                : AppColors.textPrimaryLight;
-            final textSecondary = isDark
-                ? AppColors.textSecondaryDark
-                : AppColors.textSecondaryLight;
 
             return Dialog(
               insetPadding: EdgeInsets.zero,

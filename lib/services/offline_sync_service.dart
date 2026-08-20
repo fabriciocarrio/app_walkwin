@@ -39,22 +39,40 @@ class OfflineSyncService {
     required String source,
   }) async {
     final db = await _database;
-    // Upsert con MAX: nunca sobreescribe con un valor menor.
-    // ON CONFLICT DO UPDATE requiere SQLite ≥ 3.24 (disponible en Android 8+).
-    await db.rawInsert(
-      '''
-      INSERT INTO local_steps (date, total_steps, source, synced)
-      VALUES (?, ?, ?, 0)
-      ON CONFLICT(date) DO UPDATE SET
-        total_steps = MAX(local_steps.total_steps, excluded.total_steps),
-        source      = excluded.source,
-        synced      = CASE
-                        WHEN excluded.total_steps > local_steps.total_steps THEN 0
-                        ELSE local_steps.synced
-                      END
-      ''',
-      [date, steps, source],
-    );
+    await db.transaction((txn) async {
+      final existing = await txn.query(
+        'local_steps',
+        columns: ['id', 'total_steps', 'synced'],
+        where: 'date = ?',
+        whereArgs: [date],
+        limit: 1,
+      );
+
+      if (existing.isEmpty) {
+        await txn.insert('local_steps', {
+          'date': date,
+          'total_steps': steps,
+          'source': source,
+          'synced': 0,
+        });
+      } else {
+        final currentSteps = existing.first['total_steps'] as int;
+        final currentSynced = existing.first['synced'] as int;
+        final newSteps = steps > currentSteps ? steps : currentSteps;
+        final newSynced = steps > currentSteps ? 0 : currentSynced;
+
+        await txn.update(
+          'local_steps',
+          {
+            'total_steps': newSteps,
+            'source': source,
+            'synced': newSynced,
+          },
+          where: 'date = ?',
+          whereArgs: [date],
+        );
+      }
+    });
   }
 
   /// Devuelve los pasos guardados localmente para una fecha determinada.

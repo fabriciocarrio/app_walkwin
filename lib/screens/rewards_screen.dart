@@ -6,6 +6,28 @@ import '../theme/app_theme.dart';
 import 'business_profile_screen.dart';
 import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 
+class OfferItem {
+  final String id;
+  final String title;
+  final String? description;
+  final String? imageUrl;
+  final int peCost;
+  final Business business;
+  final bool isFeatured;
+  final String? offerId;
+
+  OfferItem({
+    required this.id,
+    required this.title,
+    this.description,
+    this.imageUrl,
+    required this.peCost,
+    required this.business,
+    this.isFeatured = false,
+    this.offerId,
+  });
+}
+
 class RewardsScreen extends StatefulWidget {
   const RewardsScreen({super.key});
 
@@ -23,8 +45,8 @@ class _RewardsScreenState extends State<RewardsScreen>
   // Tab "Mis QRs" + "Historial"
   List<Redemption> _redemptions = [];
 
-  // Tab "Ofertas" â€” comercios con oferta activa
-  List<Business> _offers = [];
+  // Tab "Ofertas" — ofertas individuales de los comercios
+  List<OfferItem> _offerItems = [];
 
   bool _loading = true;
   String? _error;
@@ -60,16 +82,47 @@ class _RewardsScreenState extends State<RewardsScreen>
       final businessList = results[2] as List<dynamic>;
 
       if (mounted) {
+        final List<OfferItem> items = [];
+        for (final b in businessList) {
+          final business = Business.fromJson(b);
+          if (!business.isActive) continue;
+
+          if (business.offers.isNotEmpty) {
+            for (final offer in business.offers) {
+              if (offer.isActive && offer.peCost > 0) {
+                items.add(OfferItem(
+                  id: '${business.id}_${offer.id}',
+                  title: offer.title,
+                  description: offer.description,
+                  imageUrl: offer.imageUrl ?? business.imageUrl,
+                  peCost: offer.peCost,
+                  business: business,
+                  isFeatured: business.isFeatured,
+                  offerId: offer.id,
+                ));
+              }
+            }
+          } else if (business.offer != null && business.offerCost > 0) {
+            items.add(OfferItem(
+              id: business.id,
+              title: business.offer!,
+              description: null,
+              imageUrl: business.imageUrl,
+              peCost: business.offerCost,
+              business: business,
+              isFeatured: business.isFeatured,
+              offerId: null,
+            ));
+          }
+        }
+
         setState(() {
           _peBalance = stats['pe_balance'] ?? stats['coins'] ?? 0;
           _streak = stats['streak'] ?? 0;
           _redemptions = redemptionList
               .map((r) => Redemption.fromJson(r))
               .toList();
-          _offers = businessList
-              .map((b) => Business.fromJson(b))
-              .where((b) => b.offer != null && b.offerCost > 0 && b.isActive)
-              .toList();
+          _offerItems = items;
           _loading = false;
         });
       }
@@ -83,10 +136,17 @@ class _RewardsScreenState extends State<RewardsScreen>
     }
   }
 
-  List<Redemption> get _pending =>
-      _redemptions.where((r) => r.status == 'pending').toList();
   List<Redemption> get _history =>
       _redemptions.where((r) => r.status != 'pending').toList();
+
+  String _formatDistance(int distanceM) {
+    if (distanceM <= 0) return 'San Juan';
+    if (distanceM < 2000) {
+      return '${distanceM.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}m';
+    }
+    final km = distanceM / 1000.0;
+    return '${km.toStringAsFixed(1)} km';
+  }
 
   // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   @override
@@ -187,69 +247,82 @@ class _RewardsScreenState extends State<RewardsScreen>
     );
   }
 
-  // â”€â”€ Header con saldo â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Header con saldo minimalista ──────────────────────────────────────────
   Widget _buildHeader(bool isDark) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-          child: Row(
+    final textPrimary = isDark
+        ? AppColors.textPrimaryDark
+        : AppColors.textPrimaryLight;
+    final textSecondary = isDark
+        ? AppColors.textSecondaryDark
+        : AppColors.textSecondaryLight;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Premios',
                     style: TextStyle(
-                      fontSize: 24,
+                      fontSize: 22,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF0D1B2A),
+                      color: textPrimary,
                     ),
                   ),
-                  const Text(
+                  Text(
                     'Canjeá tus Puntos Exploria',
-                    style: TextStyle(fontSize: 14, color: Colors.black54),
+                    style: TextStyle(fontSize: 12, color: textSecondary),
                   ),
                 ],
               ),
-              const Icon(TablerIcons.help_circle, color: Color(0xFF0D1B2A)),
+              Icon(TablerIcons.help_circle, color: textSecondary, size: 20),
             ],
           ),
-        ),
-        Container(
-          margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-          height: 180,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            image: const DecorationImage(
-              image: AssetImage('assets/premios-hero.png'),
-              fit: BoxFit.cover,
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: isDark
+                    ? [const Color(0xFF1E293B), const Color(0xFF0F172A)]
+                    : [const Color(0xFF1A67F8), const Color(0xFF0D47A1)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF1A67F8).withAlpha(isDark ? 30 : 50),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Container(
-                      width: 56,
-                      height: 56,
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withAlpha(40),
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(
                         TablerIcons.trophy,
-                        color: Color(0xFFEAA610),
-                        size: 36,
+                        color: Color(0xFFFFD700),
+                        size: 22,
                       ),
                     ),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: 12),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -260,59 +333,60 @@ class _RewardsScreenState extends State<RewardsScreen>
                             Text(
                               '$_peBalance',
                               style: const TextStyle(
-                                fontSize: 42,
+                                fontSize: 22,
                                 fontWeight: FontWeight.bold,
-                                color: Color(0xFF1E1E1E),
+                                color: Colors.white,
                                 height: 1,
                               ),
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: 4),
                             const Text(
                               'PE',
                               style: TextStyle(
-                                fontSize: 20,
+                                fontSize: 13,
                                 fontWeight: FontWeight.bold,
-                                color: Color(0xFF1E1E1E),
+                                color: Colors.white70,
                               ),
                             ),
                           ],
                         ),
+                        const SizedBox(height: 2),
                         const Text(
                           'Puntos Exploria',
                           style: TextStyle(
-                            fontSize: 16,
+                            fontSize: 11,
                             fontWeight: FontWeight.w500,
-                            color: Color(0xFF1E1E1E),
+                            color: Colors.white70,
                           ),
                         ),
                       ],
                     ),
                   ],
                 ),
-                const Spacer(),
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
+                    horizontal: 12,
+                    vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFEAA610).withAlpha(120),
-                    borderRadius: BorderRadius.circular(24),
+                    color: Colors.white.withAlpha(35),
+                    borderRadius: BorderRadius.circular(20),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       const Icon(
                         TablerIcons.flame,
-                        color: Color(0xFF5C3600),
-                        size: 20,
+                        color: Color(0xFFFF9800),
+                        size: 15,
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 6),
                       Text(
-                        '$_streak días de racha  >',
+                        '$_streak días',
                         style: const TextStyle(
+                          fontSize: 12,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF5C3600),
+                          color: Colors.white,
                         ),
                       ),
                     ],
@@ -321,8 +395,8 @@ class _RewardsScreenState extends State<RewardsScreen>
               ],
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -378,16 +452,16 @@ class _RewardsScreenState extends State<RewardsScreen>
     );
   }
 
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-  //  TAB 1 â€” Ofertas disponibles
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ══════════════════════════════════════════════════════════════════════════
+  //  TAB 1 — Ofertas disponibles (Item-Centric / Centrado en Premios)
+  // ══════════════════════════════════════════════════════════════════════════
   Widget _buildOffersTab(
     bool isDark,
     Color card,
     Color textPrimary,
     Color textSecondary,
   ) {
-    if (_offers.isEmpty) {
+    if (_offerItems.isEmpty) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(32),
@@ -410,7 +484,7 @@ class _RewardsScreenState extends State<RewardsScreen>
               ),
               const SizedBox(height: 8),
               Text(
-                'Los comercios participantes\naparecerán acá.',
+                'Los premios y promociones\naparecerán acá.',
                 style: TextStyle(
                   color: textSecondary,
                   fontSize: 13,
@@ -424,8 +498,8 @@ class _RewardsScreenState extends State<RewardsScreen>
       );
     }
 
-    final featured = _offers.where((b) => b.isFeatured).toList();
-    final regular = _offers.where((b) => !b.isFeatured).toList();
+    final featured = _offerItems.where((o) => o.isFeatured).toList();
+    final regular = _offerItems.where((o) => !o.isFeatured).toList();
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
@@ -435,7 +509,7 @@ class _RewardsScreenState extends State<RewardsScreen>
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Ofertas destacadas',
+                'Premios destacados',
                 style: TextStyle(
                   color: textPrimary,
                   fontSize: 18,
@@ -443,7 +517,7 @@ class _RewardsScreenState extends State<RewardsScreen>
                 ),
               ),
               const Text(
-                'Ver todas >',
+                'Ver todos >',
                 style: TextStyle(
                   color: Color(0xFF1A67F8),
                   fontSize: 14,
@@ -454,7 +528,7 @@ class _RewardsScreenState extends State<RewardsScreen>
           ),
           const SizedBox(height: 16),
           ...featured.map(
-            (b) => _buildOfferCard(b, isDark, card, textPrimary, textSecondary),
+            (o) => _buildOfferCard(o, isDark, card, textPrimary, textSecondary),
           ),
           const SizedBox(height: 16),
           ClipRRect(
@@ -484,7 +558,7 @@ class _RewardsScreenState extends State<RewardsScreen>
                           const Text(
                             '¡Nuevas ofertas cada semana!',
                             style: TextStyle(
-                              color: Color(0xFF1E293B), // Dark slate blue color
+                              color: Color(0xFF1E293B),
                               fontSize: 15,
                               fontWeight: FontWeight.bold,
                             ),
@@ -510,20 +584,22 @@ class _RewardsScreenState extends State<RewardsScreen>
           const SizedBox(height: 24),
         ],
         ...regular.map(
-          (b) => _buildOfferCard(b, isDark, card, textPrimary, textSecondary),
+          (o) => _buildOfferCard(o, isDark, card, textPrimary, textSecondary),
         ),
       ],
     );
   }
 
   Widget _buildOfferCard(
-    Business business,
+    OfferItem item,
     bool isDark,
     Color card,
     Color textPrimary,
     Color textSecondary,
   ) {
-    final canAfford = _peBalance >= business.offerCost;
+    final business = item.business;
+    final canAfford = _peBalance >= item.peCost;
+    final cardImage = item.imageUrl ?? business.imageUrl;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -542,7 +618,7 @@ class _RewardsScreenState extends State<RewardsScreen>
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Col 1: Foto
+          // Col 1: Foto + Badges + Avatar Comercio
           SizedBox(
             width: 120,
             child: Stack(
@@ -553,58 +629,89 @@ class _RewardsScreenState extends State<RewardsScreen>
                     topLeft: Radius.circular(16),
                     bottomLeft: Radius.circular(16),
                   ),
-                  child: business.imageUrl != null
-                      ? Image.network(business.imageUrl!, fit: BoxFit.cover)
-                      : Container(color: Colors.grey.shade300),
+                  child: cardImage != null
+                      ? Image.network(cardImage, fit: BoxFit.cover)
+                      : Container(
+                          color: AppColors.primary.withAlpha(30),
+                          child: const Icon(
+                            TablerIcons.gift,
+                            color: AppColors.primary,
+                            size: 40,
+                          ),
+                        ),
                 ),
+                // Avatar del Comercio en esquina inferior
                 Positioned(
                   bottom: 8,
                   left: 8,
-                  child: Container(
-                    width: 40,
-                    height: 40,
-                    padding: const EdgeInsets.all(3),
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(20),
-                      child: business.imageUrl != null
-                          ? Image.network(business.imageUrl!, fit: BoxFit.cover)
-                          : const Icon(
-                              TablerIcons.building_store,
-                              color: Colors.grey,
-                              size: 20,
-                            ),
+                  child: GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              BusinessProfileScreen(business: business),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      width: 36,
+                      height: 36,
+                      padding: const EdgeInsets.all(2),
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black26,
+                            blurRadius: 4,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(18),
+                        child: business.imageUrl != null
+                            ? Image.network(business.imageUrl!, fit: BoxFit.cover)
+                            : const Icon(
+                                TablerIcons.building_store,
+                                color: Colors.grey,
+                                size: 18,
+                              ),
+                      ),
                     ),
                   ),
                 ),
+                // Badge de Costo PE (Verde/Azul si alcanza, Gris si no alcanza)
                 Positioned(
                   top: 8,
                   right: 8,
                   child: Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 3,
+                      horizontal: 8,
+                      vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.black.withAlpha(160),
-                      borderRadius: BorderRadius.circular(8),
+                      color: canAfford
+                          ? const Color(0xFF1A67F8)
+                          : Colors.black.withAlpha(180),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(
+                        Icon(
                           TablerIcons.trophy,
-                          color: Color(0xFF4CAF50),
-                          size: 12,
+                          color: canAfford
+                              ? const Color(0xFFFFD700)
+                              : Colors.grey.shade400,
+                          size: 13,
                         ),
-                        const SizedBox(width: 2),
+                        const SizedBox(width: 3),
                         Text(
-                          '${business.offerCost} PE',
-                          style: const TextStyle(
-                            color: Colors.white,
+                          '${item.peCost} PE',
+                          style: TextStyle(
+                            color: canAfford ? Colors.white : Colors.grey.shade300,
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
                           ),
@@ -617,128 +724,105 @@ class _RewardsScreenState extends State<RewardsScreen>
             ),
           ),
 
-          // Col 2: Info + Botón
+          // Col 2: Información de la Oferta + Comercio + Botón Canjear
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Fila 1: Info
                 Expanded(
-                  child: InkWell(
-                    borderRadius: const BorderRadius.only(
-                      topRight: Radius.circular(16),
-                    ),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              BusinessProfileScreen(business: business),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Nombre del Comercio (Clickable)
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    BusinessProfileScreen(business: business),
+                              ),
+                            );
+                          },
+                          child: Row(
+                            children: [
+                              Icon(
+                                TablerIcons.building_store,
+                                size: 12,
+                                color: textSecondary,
+                              ),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  business.name,
+                                  style: TextStyle(
+                                    color: textSecondary,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 12,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      );
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: SingleChildScrollView(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              business.name,
-                              style: TextStyle(
-                                color: textPrimary,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 6),
-                            Row(
-                              children: [
-                                Icon(
-                                  TablerIcons.tag,
-                                  size: 13,
-                                  color: Colors.blue.shade400,
-                                ),
-                                const SizedBox(width: 4),
-                                Expanded(
-                                  child: Text(
-                                    business.offer ?? 'Oferta especial',
-                                    style: TextStyle(
-                                      color: textSecondary,
-                                      fontSize: 11,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                            Row(
-                              children: [
-                                Icon(
-                                  TablerIcons.map_pin,
-                                  size: 13,
-                                  color: Colors.grey.shade600,
-                                ),
-                                const SizedBox(width: 4),
-                                Expanded(
-                                  child: Text(
-                                    'San Juan',
-                                    style: TextStyle(
-                                      color: textSecondary,
-                                      fontSize: 11,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 3,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.blue.shade50,
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    TablerIcons.clock,
-                                    size: 11,
-                                    color: Colors.blue.shade600,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    'Válido hasta 30/06/2025',
-                                    style: TextStyle(
-                                      color: Colors.blue.shade700,
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
+                        const SizedBox(height: 4),
+                        // Título Destacado de la Oferta (Hero)
+                        Text(
+                          item.title,
+                          style: TextStyle(
+                            color: textPrimary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            height: 1.25,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
+                        if (item.description != null &&
+                            item.description!.isNotEmpty) ...[
+                          const SizedBox(height: 3),
+                          Text(
+                            item.description!,
+                            style: TextStyle(
+                              color: textSecondary,
+                              fontSize: 11,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                 ),
-                // Fila 2: Botón Canjear
+
+                // Botón Canjear / Saldo Insuficiente
                 Padding(
                   padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
+                      Row(
+                        children: [
+                          Icon(
+                            TablerIcons.map_pin,
+                            size: 12,
+                            color: Colors.grey.shade500,
+                          ),
+                          const SizedBox(width: 2),
+                          Text(
+                            _formatDistance(business.distanceM),
+                            style: TextStyle(
+                              color: textSecondary,
+                              fontSize: 10,
+                            ),
+                          ),
+                        ],
+                      ),
                       SizedBox(
                         height: 34,
                         child: ElevatedButton(
@@ -1117,7 +1201,7 @@ class _RewardsScreenState extends State<RewardsScreen>
     );
   }
 
-  void _showRedeemSheet(Business business) {
+  void _showRedeemSheet(Business business, {OfferItem? offer}) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textPrimary = isDark
         ? AppColors.textPrimaryDark
@@ -1128,6 +1212,7 @@ class _RewardsScreenState extends State<RewardsScreen>
 
     final codeController = TextEditingController();
     final formKey = GlobalKey<FormState>();
+    final offerTitle = offer?.title ?? business.offer ?? 'Premio';
 
     showModalBottomSheet(
       context: context,
@@ -1161,20 +1246,21 @@ class _RewardsScreenState extends State<RewardsScreen>
                     ),
                     const SizedBox(height: 20),
                     Text(
-                      'Canjeá tu premio',
+                      'Canjear: $offerTitle',
                       style: TextStyle(
-                        fontSize: 20,
+                        fontSize: 18,
                         fontWeight: FontWeight.bold,
                         color: textPrimary,
                       ),
+                      textAlign: TextAlign.center,
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
                     Text(
                       'Ingresá el código de 5 dígitos\nque te dio ${business.name}',
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: textSecondary, fontSize: 14),
+                      style: TextStyle(color: textSecondary, fontSize: 13),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 20),
                     TextFormField(
                       controller: codeController,
                       maxLength: 5,
@@ -1224,6 +1310,7 @@ class _RewardsScreenState extends State<RewardsScreen>
                             final result = await ApiService.redeemWithCode(
                               business.id,
                               codeController.text.trim(),
+                              offerId: offer?.offerId,
                             );
                             if (!ctx.mounted) return;
                             Navigator.pop(ctx);

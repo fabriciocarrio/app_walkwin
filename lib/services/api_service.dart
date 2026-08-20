@@ -405,9 +405,17 @@ class ApiService {
     return jsonDecode(response.body);
   }
 
-  static Future<Map<String, dynamic>> getWeeklyActivity() async {
+  static Future<Map<String, dynamic>> getWeeklyActivity({int offset = 0}) async {
+    final uri = Uri.parse('$baseUrl/activity/weekly').replace(
+      queryParameters: {'offset': offset.toString()},
+    );
+    final response = await http.get(uri, headers: _headers);
+    return jsonDecode(response.body);
+  }
+
+  static Future<Map<String, dynamic>> getActivityHistory() async {
     final response = await http.get(
-      Uri.parse('$baseUrl/activity/weekly'),
+      Uri.parse('$baseUrl/activity/history'),
       headers: _headers,
     );
     return jsonDecode(response.body);

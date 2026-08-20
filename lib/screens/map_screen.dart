@@ -2075,6 +2075,7 @@ class _MapScreenState extends State<MapScreen>
     Color textSecondary,
   ) {
     final withinRange = poi.distanceM <= poi.interactionRadiusMeters;
+    final alreadyClaimed = poi.claimedToday;
     return Container(
       decoration: BoxDecoration(
         color: card,
@@ -2199,42 +2200,69 @@ class _MapScreenState extends State<MapScreen>
                 bg: AppColors.primary.withAlpha(20),
                 fg: AppColors.primary,
               ),
+              if (alreadyClaimed) ...[
+                const SizedBox(width: 8),
+                _chip(
+                  icon: TablerIcons.circle_check,
+                  label: 'Reclamado',
+                  bg: const Color(0xFF4A9955).withAlpha(20),
+                  fg: const Color(0xFF4A9955),
+                ),
+              ],
             ],
           ),
           const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: (withinRange && !_claimingExploration)
-                  ? () => _claimPoi(poi)
-                  : null,
-              icon: _claimingExploration
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : const Icon(TablerIcons.gift, size: 20),
-              label: Text(
-                withinRange
-                    ? 'Reclamar recompensa'
-                    : 'Acercate al punto para reclamar',
+          if (alreadyClaimed)
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: null,
+                icon: const Icon(TablerIcons.circle_check, size: 20),
+                label: const Text('Reclamado hoy · vuelve mañana'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: textSecondary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
               ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: withinRange
-                    ? AppColors.primary
-                    : textSecondary,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
+            )
+          else
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: (withinRange && !_claimingExploration)
+                    ? () => _claimPoi(poi)
+                    : null,
+                icon: _claimingExploration
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(TablerIcons.gift, size: 20),
+                label: Text(
+                  withinRange
+                      ? 'Reclamar recompensa'
+                      : 'Acercate al punto para reclamar',
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: withinRange
+                      ? AppColors.primary
+                      : textSecondary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
                 ),
               ),
             ),
-          ),
         ],
       ),
     );
@@ -2593,8 +2621,13 @@ class _MapScreenState extends State<MapScreen>
           );
         }
 
-        setState(() => _selectedPoi = null);
         await _loadExplorationData();
+
+        final matches = _nearbyPois.where((p) => p.id == poi.id);
+        final updatedPoi = matches.isNotEmpty ? matches.first : null;
+        setState(() {
+          _selectedPoi = updatedPoi ?? poi;
+        });
       }
     } catch (_) {
       if (!mounted) return;

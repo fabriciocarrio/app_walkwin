@@ -398,6 +398,9 @@ class WeeklyActivityDay {
 }
 
 class WeeklyActivitySummary {
+  final int weekOffset;
+  final String? weekStart;
+  final String? weekEnd;
   final int exerciseGoalDays;
   final int exerciseDaysCompleted;
   final int exerciseThresholdSteps;
@@ -409,6 +412,9 @@ class WeeklyActivitySummary {
   final List<WeeklyActivityDay> days;
 
   WeeklyActivitySummary({
+    this.weekOffset = 0,
+    this.weekStart,
+    this.weekEnd,
     required this.exerciseGoalDays,
     required this.exerciseDaysCompleted,
     required this.exerciseThresholdSteps,
@@ -425,6 +431,9 @@ class WeeklyActivitySummary {
     final rawDays = (json['days'] as List<dynamic>? ?? []);
 
     return WeeklyActivitySummary(
+      weekOffset: json['week_offset'] ?? 0,
+      weekStart: json['week_start'],
+      weekEnd: json['week_end'],
       exerciseGoalDays: json['exercise_goal_days'] ?? 5,
       exerciseDaysCompleted: json['exercise_days_completed'] ?? 0,
       exerciseThresholdSteps: json['exercise_threshold_steps'] ?? 5000,
@@ -439,6 +448,89 @@ class WeeklyActivitySummary {
       profileHint: json['profile_hint'],
       days: rawDays
           .map((d) => WeeklyActivityDay.fromJson(d as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+}
+
+class BestDayRecord {
+  final String date;
+  final int steps;
+  final double distanceKm;
+
+  BestDayRecord({
+    required this.date,
+    required this.steps,
+    required this.distanceKm,
+  });
+
+  factory BestDayRecord.fromJson(Map<String, dynamic> json) {
+    return BestDayRecord(
+      date: json['date'] ?? '',
+      steps: json['steps'] ?? 0,
+      distanceKm: (json['distance_km'] as num?)?.toDouble() ?? 0.0,
+    );
+  }
+}
+
+class MonthlyActivitySummary {
+  final String month;
+  final int totalSteps;
+  final double distanceKm;
+  final int activeDays;
+
+  MonthlyActivitySummary({
+    required this.month,
+    required this.totalSteps,
+    required this.distanceKm,
+    required this.activeDays,
+  });
+
+  factory MonthlyActivitySummary.fromJson(Map<String, dynamic> json) {
+    return MonthlyActivitySummary(
+      month: json['month'] ?? '',
+      totalSteps: json['total_steps'] ?? 0,
+      distanceKm: (json['distance_km'] as num?)?.toDouble() ?? 0.0,
+      activeDays: json['active_days'] ?? 0,
+    );
+  }
+}
+
+class UserActivityHistory {
+  final int totalSteps;
+  final double totalDistanceKm;
+  final double? totalCaloriesKcal;
+  final int totalDaysActive;
+  final int avgDailySteps;
+  final int streakDays;
+  final BestDayRecord? bestDay;
+  final List<MonthlyActivitySummary> monthly;
+
+  UserActivityHistory({
+    required this.totalSteps,
+    required this.totalDistanceKm,
+    required this.totalCaloriesKcal,
+    required this.totalDaysActive,
+    required this.avgDailySteps,
+    required this.streakDays,
+    this.bestDay,
+    required this.monthly,
+  });
+
+  factory UserActivityHistory.fromJson(Map<String, dynamic> json) {
+    final rawMonthly = (json['monthly'] as List<dynamic>? ?? []);
+    final bestDayJson = json['best_day'] as Map<String, dynamic>?;
+
+    return UserActivityHistory(
+      totalSteps: json['total_steps'] ?? 0,
+      totalDistanceKm: (json['total_distance_km'] as num?)?.toDouble() ?? 0.0,
+      totalCaloriesKcal: (json['total_calories_kcal'] as num?)?.toDouble(),
+      totalDaysActive: json['total_days_active'] ?? 0,
+      avgDailySteps: json['avg_daily_steps'] ?? 0,
+      streakDays: json['streak_days'] ?? 0,
+      bestDay: bestDayJson != null ? BestDayRecord.fromJson(bestDayJson) : null,
+      monthly: rawMonthly
+          .map((m) => MonthlyActivitySummary.fromJson(m as Map<String, dynamic>))
           .toList(),
     );
   }
@@ -481,6 +573,7 @@ class ExplorationPoi {
   final String? province;
   final String? department;
   final DateTime? claimedAt;
+  final bool claimedToday;
 
   ExplorationPoi({
     required this.id,
@@ -497,6 +590,7 @@ class ExplorationPoi {
     this.province,
     this.department,
     this.claimedAt,
+    this.claimedToday = false,
   });
 
   factory ExplorationPoi.fromJson(Map<String, dynamic> json) {
@@ -527,6 +621,7 @@ class ExplorationPoi {
       claimedAt: json['claimed_at'] != null
           ? DateTime.tryParse(json['claimed_at'].toString())
           : null,
+      claimedToday: json['claimed_today'] == true,
     );
   }
 }

@@ -101,7 +101,8 @@ class StepCountingService {
       return;
     }
 
-    if (sessionStepsNotifier.value != math.max(0, nextSession ?? 0)) {
+    if (sessionStepsNotifier.value != math.max(0, nextSession ?? 0) &&
+        bgDate == currentDayKey) {
       sessionStepsNotifier.value = math.max(0, nextSession ?? 0);
       isRunning.value = sessionStepsNotifier.value > 0;
       _lastAcceptedSensorValue = nextSensor;

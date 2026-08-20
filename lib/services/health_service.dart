@@ -8,8 +8,42 @@ class HealthService {
 
   /// Request authorization from Google Health Connect / Apple Health.
   static Future<bool> requestAuthorization() async {
-    await Permission.activityRecognition.request();
-    return _health.requestAuthorization(_types, permissions: [HealthDataAccess.READ]);
+    try {
+      await Permission.activityRecognition.request();
+    } catch (_) {}
+
+    try {
+      // Check if already authorized
+      final hasPerms = await _health.hasPermissions(_types, permissions: [HealthDataAccess.READ]);
+      if (hasPerms == true) {
+        return true;
+      }
+
+      // Request native authorization dialog
+      final result = await _health.requestAuthorization(_types, permissions: [HealthDataAccess.READ]);
+      if (result) {
+        return true;
+      }
+
+      // Re-check permissions after prompt
+      final hasPermsAfter = await _health.hasPermissions(_types, permissions: [HealthDataAccess.READ]);
+      if (hasPermsAfter == true) {
+        return true;
+      }
+
+      // Verification check by trying to read steps
+      final steps = await getTodaySteps();
+      return steps != null;
+    } catch (e) {
+      try {
+        final hasPermsAfter = await _health.hasPermissions(_types, permissions: [HealthDataAccess.READ]);
+        if (hasPermsAfter == true) return true;
+        final steps = await getTodaySteps();
+        return steps != null;
+      } catch (_) {
+        return false;
+      }
+    }
   }
 
   /// Whether Google Health Connect is available on the device.

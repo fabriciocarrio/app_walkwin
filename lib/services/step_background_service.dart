@@ -210,12 +210,6 @@ class _BgStepCounter {
     );
     await _storage.write(key: _keyDate, value: _activeDayKey);
     await _storage.write(key: _keyDaily, value: _sessionSteps.toString());
-    await _storage.write(
-      key: _keyMainSensor,
-      value: _lastAcceptedSensorValue.toString(),
-    );
-    await _storage.write(key: _keyMainDate, value: _activeDayKey);
-    await _storage.write(key: _keyMainDaily, value: _sessionSteps.toString());
   }
 
   static Future<void> _mirror() async {
@@ -223,11 +217,11 @@ class _BgStepCounter {
     final mainDate = await _storage.read(key: _keyMainDate);
     final mainDaily = await _storage.read(key: _keyMainDaily);
 
-    if (mainVal != null && mainDate != null) {
+    if (mainVal != null && mainDate != null && mainDate == _argentinaDateKey()) {
       await _storage.write(key: _keySensor, value: mainVal);
       await _storage.write(key: _keyDate, value: mainDate);
     }
-    if (mainDaily != null) {
+    if (mainDaily != null && mainDate == _argentinaDateKey()) {
       await _storage.write(key: _keyDaily, value: mainDaily);
     }
   }

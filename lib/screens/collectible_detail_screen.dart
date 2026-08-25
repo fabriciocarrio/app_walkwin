@@ -292,16 +292,37 @@ class _CollectibleDetailScreenState extends State<CollectibleDetailScreen> {
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
-            expandedHeight: 340,
+            expandedHeight: 360,
             pinned: true,
             backgroundColor: bg,
+            leading: Container(
+              margin: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.55),
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white.withOpacity(0.25), width: 1),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.35),
+                    blurRadius: 10,
+                    spreadRadius: 1,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: IconButton(
+                icon: const Icon(TablerIcons.arrow_left, color: Colors.white, size: 20),
+                onPressed: () => Navigator.of(context).pop(),
+                tooltip: 'Volver',
+              ),
+            ),
             flexibleSpace: FlexibleSpaceBar(
               background: Stack(
                 fit: StackFit.expand,
                 children: [
                   // Card Header Preview Container with Glowing Border matching gamification_cards.png
                   Padding(
-                    padding: const EdgeInsets.only(top: 60, left: 16, right: 16, bottom: 16),
+                    padding: const EdgeInsets.only(top: 72, left: 16, right: 16, bottom: 16),
                     child: Container(
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(24),

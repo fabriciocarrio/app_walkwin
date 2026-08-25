@@ -43,10 +43,12 @@ class _CollectibleDetailScreenState extends State<CollectibleDetailScreen> {
       final sameRarity = list
           .whereType<Map<String, dynamic>>()
           .map((c) => CollectibleSpawnDto.fromJson(c))
-          .where((c) =>
-              c.collectibleId != widget.item.collectibleId &&
-              c.quantity >= 1 &&
-              c.collectibleRarity.toLowerCase() == _rarity.toLowerCase())
+          .where(
+            (c) =>
+                c.collectibleId != widget.item.collectibleId &&
+                c.quantity >= 1 &&
+                c.collectibleRarity.toLowerCase() == _rarity.toLowerCase(),
+          )
           .toList();
       if (mounted) setState(() => _craftCandidates = sameRarity);
     } catch (_) {}
@@ -54,7 +56,9 @@ class _CollectibleDetailScreenState extends State<CollectibleDetailScreen> {
 
   Future<void> _loadDetail() async {
     try {
-      final result = await ApiService.getCollectibleDetail(widget.collectibleId);
+      final result = await ApiService.getCollectibleDetail(
+        widget.collectibleId,
+      );
       if (mounted) {
         setState(() {
           if (result['success'] == true) {
@@ -99,8 +103,10 @@ class _CollectibleDetailScreenState extends State<CollectibleDetailScreen> {
       if (result['success'] == true) {
         final data = result['data'] as Map<String, dynamic>? ?? {};
         final crafted = data['crafted'] as Map<String, dynamic>? ?? {};
-        final craftedName = crafted['collectible_name']?.toString() ?? 'Nueva tarjeta';
-        final craftedRarity = crafted['collectible_rarity']?.toString() ?? 'common';
+        final craftedName =
+            crafted['collectible_name']?.toString() ?? 'Nueva tarjeta';
+        final craftedRarity =
+            crafted['collectible_rarity']?.toString() ?? 'common';
         final craftedImage = crafted['collectible_image_url']?.toString();
 
         setState(() {
@@ -122,7 +128,9 @@ class _CollectibleDetailScreenState extends State<CollectibleDetailScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(result['message']?.toString() ?? 'Error al combinar tarjetas'),
+              content: Text(
+                result['message']?.toString() ?? 'Error al combinar tarjetas',
+              ),
               backgroundColor: Colors.redAccent,
             ),
           );
@@ -132,13 +140,20 @@ class _CollectibleDetailScreenState extends State<CollectibleDetailScreen> {
       setState(() => _crafting = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error de red: $e'), backgroundColor: Colors.redAccent),
+          SnackBar(
+            content: Text('Error de red: $e'),
+            backgroundColor: Colors.redAccent,
+          ),
         );
       }
     }
   }
 
-  Future<void> _showCraftResult(String name, String rarity, String? imageUrl) async {
+  Future<void> _showCraftResult(
+    String name,
+    String rarity,
+    String? imageUrl,
+  ) async {
     final rarityColor = _rarityColor(rarity);
     await showDialog(
       context: context,
@@ -165,7 +180,7 @@ class _CollectibleDetailScreenState extends State<CollectibleDetailScreen> {
                     color: rarityColor.withOpacity(0.4),
                     blurRadius: 15,
                     spreadRadius: 2,
-                  )
+                  ),
                 ],
               ),
               child: ClipRRect(
@@ -176,7 +191,11 @@ class _CollectibleDetailScreenState extends State<CollectibleDetailScreen> {
                   color: rarityColor.withOpacity(0.15),
                   child: imageUrl != null && imageUrl.isNotEmpty
                       ? Image.network(imageUrl, fit: BoxFit.cover)
-                      : Icon(TablerIcons.sparkles, color: rarityColor, size: 50),
+                      : Icon(
+                          TablerIcons.sparkles,
+                          color: rarityColor,
+                          size: 50,
+                        ),
                 ),
               ),
             ),
@@ -198,7 +217,12 @@ class _CollectibleDetailScreenState extends State<CollectibleDetailScreen> {
               ),
               child: Text(
                 rarity.toUpperCase(),
-                style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 1),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1,
+                ),
               ),
             ),
           ],
@@ -210,10 +234,18 @@ class _CollectibleDetailScreenState extends State<CollectibleDetailScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: rarityColor,
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 32,
+                  vertical: 12,
+                ),
               ),
-              child: const Text('¡Excelente!', style: TextStyle(fontWeight: FontWeight.bold)),
+              child: const Text(
+                '¡Excelente!',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
             ),
           ),
         ],
@@ -281,18 +313,25 @@ class _CollectibleDetailScreenState extends State<CollectibleDetailScreen> {
     final setData = _detail?['set'] as Map<String, dynamic>?;
 
     // Calculate total cards available of this rarity
-    final candidatesCount = _craftCandidates.fold<int>(0, (sum, item) => sum + item.quantity);
+    final candidatesCount = _craftCandidates.fold<int>(
+      0,
+      (sum, item) => sum + item.quantity,
+    );
     final totalCardsOfRarity = _quantity + candidatesCount;
     const int requiredForFusion = 3;
-    final double fusionProgress = (totalCardsOfRarity / requiredForFusion).clamp(0.0, 1.0);
+    final double fusionProgress = (totalCardsOfRarity / requiredForFusion)
+        .clamp(0.0, 1.0);
     final bool canFuse = totalCardsOfRarity >= requiredForFusion;
+
+    final double statusBarHeight = MediaQuery.of(context).padding.top;
+    final double topPadding = statusBarHeight + 56;
 
     return Scaffold(
       backgroundColor: bg,
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
-            expandedHeight: 360,
+            expandedHeight: 390,
             pinned: true,
             backgroundColor: bg,
             leading: Container(
@@ -300,7 +339,10 @@ class _CollectibleDetailScreenState extends State<CollectibleDetailScreen> {
               decoration: BoxDecoration(
                 color: Colors.black.withOpacity(0.55),
                 shape: BoxShape.circle,
-                border: Border.all(color: Colors.white.withOpacity(0.25), width: 1),
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.25),
+                  width: 1,
+                ),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.35),
@@ -311,7 +353,11 @@ class _CollectibleDetailScreenState extends State<CollectibleDetailScreen> {
                 ],
               ),
               child: IconButton(
-                icon: const Icon(TablerIcons.arrow_left, color: Colors.white, size: 20),
+                icon: const Icon(
+                  TablerIcons.arrow_left,
+                  color: Colors.white,
+                  size: 20,
+                ),
                 onPressed: () => Navigator.of(context).pop(),
                 tooltip: 'Volver',
               ),
@@ -322,7 +368,12 @@ class _CollectibleDetailScreenState extends State<CollectibleDetailScreen> {
                 children: [
                   // Card Header Preview Container with Glowing Border matching gamification_cards.png
                   Padding(
-                    padding: const EdgeInsets.only(top: 72, left: 16, right: 16, bottom: 16),
+                    padding: EdgeInsets.only(
+                      top: topPadding,
+                      left: 16,
+                      right: 16,
+                      bottom: 16,
+                    ),
                     child: Container(
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(24),
@@ -333,7 +384,7 @@ class _CollectibleDetailScreenState extends State<CollectibleDetailScreen> {
                             blurRadius: 20,
                             spreadRadius: 2,
                             offset: const Offset(0, 8),
-                          )
+                          ),
                         ],
                       ),
                       child: ClipRRect(
@@ -348,13 +399,21 @@ class _CollectibleDetailScreenState extends State<CollectibleDetailScreen> {
                                 fit: BoxFit.cover,
                                 errorBuilder: (_, __, ___) => Container(
                                   color: rarityColor.withOpacity(0.2),
-                                  child: Icon(TablerIcons.photo, size: 80, color: rarityColor),
+                                  child: Icon(
+                                    TablerIcons.photo,
+                                    size: 80,
+                                    color: rarityColor,
+                                  ),
                                 ),
                               )
                             else
                               Container(
                                 color: rarityColor.withOpacity(0.2),
-                                child: Icon(TablerIcons.photo, size: 80, color: rarityColor),
+                                child: Icon(
+                                  TablerIcons.photo,
+                                  size: 80,
+                                  color: rarityColor,
+                                ),
                               ),
 
                             // Overlay Gradient
@@ -378,7 +437,10 @@ class _CollectibleDetailScreenState extends State<CollectibleDetailScreen> {
                               top: 14,
                               left: 14,
                               child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 6,
+                                ),
                                 decoration: BoxDecoration(
                                   gradient: rarityGradient,
                                   borderRadius: BorderRadius.circular(12),
@@ -393,7 +455,11 @@ class _CollectibleDetailScreenState extends State<CollectibleDetailScreen> {
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    const Icon(TablerIcons.sparkles, color: Colors.white, size: 14),
+                                    const Icon(
+                                      TablerIcons.sparkles,
+                                      color: Colors.white,
+                                      size: 14,
+                                    ),
                                     const SizedBox(width: 5),
                                     Text(
                                       _rarity.toUpperCase(),
@@ -424,19 +490,31 @@ class _CollectibleDetailScreenState extends State<CollectibleDetailScreen> {
                                       fontSize: 24,
                                       fontWeight: FontWeight.bold,
                                       shadows: [
-                                        Shadow(color: Colors.black54, blurRadius: 6, offset: Offset(0, 2)),
+                                        Shadow(
+                                          color: Colors.black54,
+                                          blurRadius: 6,
+                                          offset: Offset(0, 2),
+                                        ),
                                       ],
                                     ),
                                   ),
                                   if (widget.item.collectibleCategory != null &&
-                                      widget.item.collectibleCategory!.isNotEmpty)
+                                      widget
+                                          .item
+                                          .collectibleCategory!
+                                          .isNotEmpty)
                                     Padding(
                                       padding: const EdgeInsets.only(top: 4),
                                       child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 10,
+                                          vertical: 3,
+                                        ),
                                         decoration: BoxDecoration(
                                           color: Colors.white.withOpacity(0.2),
-                                          borderRadius: BorderRadius.circular(8),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
                                         ),
                                         child: Text(
                                           widget.item.collectibleCategory!,
@@ -475,7 +553,9 @@ class _CollectibleDetailScreenState extends State<CollectibleDetailScreen> {
                       color: isDark ? AppColors.cardDark : Colors.white,
                       borderRadius: BorderRadius.circular(18),
                       border: Border.all(
-                        color: canFuse ? rarityColor : rarityColor.withOpacity(0.25),
+                        color: canFuse
+                            ? rarityColor
+                            : rarityColor.withOpacity(0.25),
                         width: canFuse ? 2 : 1,
                       ),
                       boxShadow: [
@@ -502,7 +582,11 @@ class _CollectibleDetailScreenState extends State<CollectibleDetailScreen> {
                                     color: rarityColor.withOpacity(0.12),
                                     borderRadius: BorderRadius.circular(10),
                                   ),
-                                  child: Icon(TablerIcons.wand, color: rarityColor, size: 20),
+                                  child: Icon(
+                                    TablerIcons.wand,
+                                    color: rarityColor,
+                                    size: 20,
+                                  ),
                                 ),
                                 const SizedBox(width: 12),
                                 Column(
@@ -513,7 +597,9 @@ class _CollectibleDetailScreenState extends State<CollectibleDetailScreen> {
                                       style: TextStyle(
                                         fontSize: 15,
                                         fontWeight: FontWeight.bold,
-                                        color: isDark ? Colors.white : Colors.black87,
+                                        color: isDark
+                                            ? Colors.white
+                                            : Colors.black87,
                                       ),
                                     ),
                                     Text(
@@ -523,7 +609,9 @@ class _CollectibleDetailScreenState extends State<CollectibleDetailScreen> {
                                         fontWeight: FontWeight.w600,
                                         color: canFuse
                                             ? rarityColor
-                                            : (isDark ? Colors.white60 : Colors.black54),
+                                            : (isDark
+                                                  ? Colors.white60
+                                                  : Colors.black54),
                                       ),
                                     ),
                                   ],
@@ -531,7 +619,10 @@ class _CollectibleDetailScreenState extends State<CollectibleDetailScreen> {
                               ],
                             ),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 5,
+                              ),
                               decoration: BoxDecoration(
                                 color: rarityColor.withOpacity(0.15),
                                 borderRadius: BorderRadius.circular(10),
@@ -560,11 +651,16 @@ class _CollectibleDetailScreenState extends State<CollectibleDetailScreen> {
                                   ? const SizedBox(
                                       width: 20,
                                       height: 20,
-                                      child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2.5,
+                                        color: Colors.white,
+                                      ),
                                     )
                                   : const Icon(TablerIcons.sparkles, size: 20),
                               label: Text(
-                                _crafting ? 'Fusionando...' : 'FUSIONAR TARJETAS',
+                                _crafting
+                                    ? 'Fusionando...'
+                                    : 'FUSIONAR TARJETAS',
                                 style: const TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w800,
@@ -579,7 +675,9 @@ class _CollectibleDetailScreenState extends State<CollectibleDetailScreen> {
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(14),
                                 ),
-                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
                               ),
                             ),
                           ),
@@ -591,21 +689,31 @@ class _CollectibleDetailScreenState extends State<CollectibleDetailScreen> {
                             child: LinearProgressIndicator(
                               value: fusionProgress,
                               minHeight: 12,
-                              backgroundColor: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
-                              valueColor: AlwaysStoppedAnimation<Color>(rarityColor),
+                              backgroundColor: isDark
+                                  ? Colors.grey.shade800
+                                  : Colors.grey.shade200,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                rarityColor,
+                              ),
                             ),
                           ),
                           const SizedBox(height: 10),
                           Row(
                             children: [
-                              Icon(TablerIcons.info_circle, size: 14, color: isDark ? Colors.white54 : Colors.black54),
+                              Icon(
+                                TablerIcons.info_circle,
+                                size: 14,
+                                color: isDark ? Colors.white54 : Colors.black54,
+                              ),
                               const SizedBox(width: 6),
                               Expanded(
                                 child: Text(
                                   'Juntá ${requiredForFusion - totalCardsOfRarity} tarjeta(s) más de rareza ${_rarity.toUpperCase()} para habilitar la Fusión.',
                                   style: TextStyle(
                                     fontSize: 11,
-                                    color: isDark ? Colors.white54 : Colors.black54,
+                                    color: isDark
+                                        ? Colors.white54
+                                        : Colors.black54,
                                   ),
                                 ),
                               ),
@@ -624,9 +732,16 @@ class _CollectibleDetailScreenState extends State<CollectibleDetailScreen> {
                     decoration: BoxDecoration(
                       color: isDark ? AppColors.cardDark : Colors.white,
                       borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: isDark ? Colors.grey.shade800 : Colors.grey.shade200),
+                      border: Border.all(
+                        color: isDark
+                            ? Colors.grey.shade800
+                            : Colors.grey.shade200,
+                      ),
                       boxShadow: [
-                        BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10),
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.03),
+                          blurRadius: 10,
+                        ),
                       ],
                     ),
                     child: Column(
@@ -642,26 +757,49 @@ class _CollectibleDetailScreenState extends State<CollectibleDetailScreen> {
                         ),
                         const SizedBox(height: 14),
                         if (widget.item.collectibleCategory != null)
-                          _infoRow('Categoría', widget.item.collectibleCategory!, TablerIcons.category),
-                        if (widget.item.province != null && widget.item.province!.isNotEmpty)
-                          _infoRow('Provincia', widget.item.province!, TablerIcons.map_pin),
-                        if (widget.item.department != null && widget.item.department!.isNotEmpty)
-                          _infoRow('Departamento', widget.item.department!, TablerIcons.building_community),
+                          _infoRow(
+                            'Categoría',
+                            widget.item.collectibleCategory!,
+                            TablerIcons.category,
+                          ),
+                        if (widget.item.province != null &&
+                            widget.item.province!.isNotEmpty)
+                          _infoRow(
+                            'Provincia',
+                            widget.item.province!,
+                            TablerIcons.map_pin,
+                          ),
+                        if (widget.item.department != null &&
+                            widget.item.department!.isNotEmpty)
+                          _infoRow(
+                            'Departamento',
+                            widget.item.department!,
+                            TablerIcons.building_community,
+                          ),
                         if (setData != null)
-                          _infoRow('Colección', setData['name'] ?? '', TablerIcons.cards),
+                          _infoRow(
+                            'Colección',
+                            setData['name'] ?? '',
+                            TablerIcons.cards,
+                          ),
                       ],
                     ),
                   ),
 
                   // Description
-                  if (widget.item.description != null && widget.item.description!.isNotEmpty) ...[
+                  if (widget.item.description != null &&
+                      widget.item.description!.isNotEmpty) ...[
                     const SizedBox(height: 20),
                     Container(
                       padding: const EdgeInsets.all(18),
                       decoration: BoxDecoration(
                         color: isDark ? AppColors.cardDark : Colors.white,
                         borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: isDark ? Colors.grey.shade800 : Colors.grey.shade200),
+                        border: Border.all(
+                          color: isDark
+                              ? Colors.grey.shade800
+                              : Colors.grey.shade200,
+                        ),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -702,7 +840,10 @@ class _CollectibleDetailScreenState extends State<CollectibleDetailScreen> {
                     const SizedBox(height: 12),
                     ...attributes.map((attr) {
                       final map = attr as Map<String, dynamic>;
-                      final label = map['label']?.toString() ?? map['name']?.toString() ?? '';
+                      final label =
+                          map['label']?.toString() ??
+                          map['name']?.toString() ??
+                          '';
                       final value = map['value']?.toString() ?? '';
                       return Container(
                         margin: const EdgeInsets.only(bottom: 10),
@@ -722,7 +863,11 @@ class _CollectibleDetailScreenState extends State<CollectibleDetailScreen> {
                                 color: rarityColor.withOpacity(0.12),
                                 borderRadius: BorderRadius.circular(10),
                               ),
-                              child: Icon(TablerIcons.bulb, color: rarityColor, size: 20),
+                              child: Icon(
+                                TablerIcons.bulb,
+                                color: rarityColor,
+                                size: 20,
+                              ),
                             ),
                             const SizedBox(width: 14),
                             Expanded(
@@ -734,7 +879,9 @@ class _CollectibleDetailScreenState extends State<CollectibleDetailScreen> {
                                     style: TextStyle(
                                       fontWeight: FontWeight.w600,
                                       fontSize: 13,
-                                      color: isDark ? Colors.white : Colors.black87,
+                                      color: isDark
+                                          ? Colors.white
+                                          : Colors.black87,
                                     ),
                                   ),
                                   const SizedBox(height: 2),
@@ -742,7 +889,9 @@ class _CollectibleDetailScreenState extends State<CollectibleDetailScreen> {
                                     value,
                                     style: TextStyle(
                                       fontSize: 13,
-                                      color: isDark ? Colors.white60 : Colors.black54,
+                                      color: isDark
+                                          ? Colors.white60
+                                          : Colors.black54,
                                     ),
                                   ),
                                 ],
@@ -857,8 +1006,15 @@ class _CraftSelectorSheetState extends State<_CraftSelectorSheet> {
     });
   }
 
-  Widget _cardTile(CollectibleSpawnDto card, bool isDark, {bool preselected = false, bool enabled = true}) {
-    final selected = preselected || _selected.any((c) => c.collectibleId == card.collectibleId);
+  Widget _cardTile(
+    CollectibleSpawnDto card,
+    bool isDark, {
+    bool preselected = false,
+    bool enabled = true,
+  }) {
+    final selected =
+        preselected ||
+        _selected.any((c) => c.collectibleId == card.collectibleId);
     final rarityColor = _rarityColor(card.collectibleRarity);
 
     return GestureDetector(
@@ -869,7 +1025,9 @@ class _CraftSelectorSheetState extends State<_CraftSelectorSheet> {
           color: isDark ? AppColors.cardDark : Colors.white,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: selected ? rarityColor : (isDark ? Colors.grey.shade800 : Colors.grey.shade300),
+            color: selected
+                ? rarityColor
+                : (isDark ? Colors.grey.shade800 : Colors.grey.shade300),
             width: selected ? 2.5 : 1,
           ),
           boxShadow: selected
@@ -880,7 +1038,8 @@ class _CraftSelectorSheetState extends State<_CraftSelectorSheet> {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            card.collectibleImageUrl != null && card.collectibleImageUrl!.isNotEmpty
+            card.collectibleImageUrl != null &&
+                    card.collectibleImageUrl!.isNotEmpty
                 ? Image.network(card.collectibleImageUrl!, fit: BoxFit.cover)
                 : Container(color: rarityColor.withOpacity(0.2)),
             Positioned(
@@ -894,7 +1053,11 @@ class _CraftSelectorSheetState extends State<_CraftSelectorSheet> {
                 ),
                 child: Text(
                   card.quantity > 1 ? 'x${card.quantity}' : 'x1',
-                  style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w800),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ),
             ),
@@ -908,7 +1071,11 @@ class _CraftSelectorSheetState extends State<_CraftSelectorSheet> {
                     color: rarityColor,
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(TablerIcons.check, color: Colors.white, size: 14),
+                  child: const Icon(
+                    TablerIcons.check,
+                    color: Colors.white,
+                    size: 14,
+                  ),
                 ),
               ),
             Positioned(
@@ -923,7 +1090,11 @@ class _CraftSelectorSheetState extends State<_CraftSelectorSheet> {
                 ),
                 child: Text(
                   card.collectibleName,
-                  style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w600),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                  ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
@@ -949,7 +1120,9 @@ class _CraftSelectorSheetState extends State<_CraftSelectorSheet> {
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       padding: const EdgeInsets.only(top: 12, bottom: 20),
-      constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.78),
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.78,
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -970,19 +1143,35 @@ class _CraftSelectorSheetState extends State<_CraftSelectorSheet> {
                   children: [
                     Icon(TablerIcons.wand, color: rarityColor, size: 22),
                     const SizedBox(width: 8),
-                    const Text('Seleccionar tarjetas para Fusión', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    const Text(
+                      'Seleccionar tarjetas para Fusión',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 6),
                 Text(
                   'Combiná 3 tarjetas de esta rareza para obtener una tarjeta ${_nextRarityLabel(widget.currentCard.collectibleRarity)} superior.',
-                  style: TextStyle(fontSize: 13, color: isDark ? Colors.white60 : Colors.black54),
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: isDark ? Colors.white60 : Colors.black54,
+                  ),
                 ),
                 const SizedBox(height: 10),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
-                    color: canConfirm ? rarityColor.withOpacity(0.15) : (isDark ? Colors.grey.shade800 : Colors.grey.shade200),
+                    color: canConfirm
+                        ? rarityColor.withOpacity(0.15)
+                        : (isDark
+                              ? Colors.grey.shade800
+                              : Colors.grey.shade200),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
@@ -990,7 +1179,9 @@ class _CraftSelectorSheetState extends State<_CraftSelectorSheet> {
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
-                      color: canConfirm ? rarityColor : (isDark ? Colors.white60 : Colors.black54),
+                      color: canConfirm
+                          ? rarityColor
+                          : (isDark ? Colors.white60 : Colors.black54),
                     ),
                   ),
                 ),
@@ -1005,7 +1196,12 @@ class _CraftSelectorSheetState extends State<_CraftSelectorSheet> {
               crossAxisSpacing: 12,
               childAspectRatio: 0.64,
               children: [
-                _cardTile(widget.currentCard, isDark, preselected: true, enabled: false),
+                _cardTile(
+                  widget.currentCard,
+                  isDark,
+                  preselected: true,
+                  enabled: false,
+                ),
                 ...widget.candidates.map((c) => _cardTile(c, isDark)),
               ],
             ),
@@ -1015,13 +1211,23 @@ class _CraftSelectorSheetState extends State<_CraftSelectorSheet> {
             child: SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: canConfirm ? () => Navigator.of(context).pop(_selected) : null,
+                onPressed: canConfirm
+                    ? () => Navigator.of(context).pop(_selected)
+                    : null,
                 icon: const Icon(TablerIcons.sparkles, size: 20),
-                label: const Text('FUSIONAR AHORA', style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 0.8)),
+                label: const Text(
+                  'FUSIONAR AHORA',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.8,
+                  ),
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: rarityColor,
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   elevation: canConfirm ? 4 : 0,
                 ),

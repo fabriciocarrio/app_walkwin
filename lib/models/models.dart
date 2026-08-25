@@ -1,3 +1,5 @@
+import '../config/app_config.dart';
+
 class User {
   final String id;
   final String name;
@@ -104,7 +106,7 @@ class BusinessOffer {
       id: json['id']?.toString() ?? '',
       title: json['title'] ?? '',
       description: json['description'],
-      imageUrl: json['image_url']?.toString(),
+      imageUrl: AppConfig.resolveUrl(json['image_url']?.toString()),
       peCost: json['pe_cost'] ?? json['coin_cost'] ?? 0,
       limitPeriod: json['limit_period'] ?? 'none',
       limitCount: json['limit_count'] != null
@@ -203,7 +205,7 @@ class Business {
       id: json['id']?.toString() ?? '',
       name: json['name'],
       description: json['description'],
-      imageUrl: json['image_url'],
+      imageUrl: AppConfig.resolveUrl(json['image_url']?.toString()),
       distanceM: ((json['distance_meters'] ?? json['distance_m'] ?? 0) as num)
           .toInt(),
       offer: offerTitle,
@@ -598,7 +600,7 @@ class ExplorationPoi {
       id: json['id']?.toString() ?? '',
       name: json['name'] ?? 'Tesoro',
       description: json['description'],
-      imageUrl: json['image_url']?.toString(),
+      imageUrl: AppConfig.resolveUrl(json['image_url']?.toString()),
       type: json['type'] ?? json['poi_type'] ?? 'treasure',
       lat:
           (json['lat'] as num?)?.toDouble() ??
@@ -634,6 +636,7 @@ class CollectibleSpawnDto {
   final String collectibleRarity;
   final String? description;
   final String? collectibleCategory;
+  final String? categoryImageUrl;
   final String? collectibleSet;
   final double lat;
   final double lng;
@@ -653,6 +656,7 @@ class CollectibleSpawnDto {
     this.collectibleImageUrl,
     required this.collectibleRarity,
     this.collectibleCategory,
+    this.categoryImageUrl,
     this.description,
     required this.collectibleSet,
     required this.lat,
@@ -686,10 +690,10 @@ class CollectibleSpawnDto {
           json['collectible_name']?.toString() ??
           collectible['name']?.toString() ??
           'Puntos Exploria',
-      collectibleImageUrl:
+      collectibleImageUrl: AppConfig.resolveUrl(
           json['collectible_image_url']?.toString() ??
           collectible['image_url']?.toString() ??
-          json['image_url']?.toString(),
+          json['image_url']?.toString()),
       collectibleRarity:
           json['collectible_rarity']?.toString() ??
           collectible['rarity']?.toString() ??
@@ -699,6 +703,9 @@ class CollectibleSpawnDto {
       collectibleCategory:
           json['collectible_category']?.toString() ??
           collectible['category']?.toString(),
+      categoryImageUrl: AppConfig.resolveUrl(
+          json['category_image_url']?.toString() ??
+          collectible['category_image_url']?.toString()),
       collectibleSet:
           json['collectible_set']?.toString() ??
           collectible['set_name']?.toString(),

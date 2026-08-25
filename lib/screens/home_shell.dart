@@ -38,7 +38,7 @@ class _HomeShellState extends State<HomeShell> {
     setState(() => _currentIndex = 3);
   }
 
-  void _goToMap(Business business) {
+  void _goToMap(Business? business) {
     setState(() {
       _currentIndex = 2;
       _mapVersion++;

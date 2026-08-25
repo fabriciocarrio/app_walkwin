@@ -2204,7 +2204,7 @@ class _MapScreenState extends State<MapScreen>
                 const SizedBox(width: 8),
                 _chip(
                   icon: TablerIcons.circle_check,
-                  label: 'Reclamado',
+                  label: '',
                   bg: const Color(0xFF4A9955).withAlpha(20),
                   fg: const Color(0xFF4A9955),
                 ),
@@ -2212,57 +2212,75 @@ class _MapScreenState extends State<MapScreen>
             ],
           ),
           const SizedBox(height: 12),
-          if (alreadyClaimed)
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: null,
-                icon: const Icon(TablerIcons.circle_check, size: 20),
-                label: const Text('Reclamado hoy · vuelve mañana'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: textSecondary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 400),
+            switchInCurve: Curves.easeInOut,
+            switchOutCurve: Curves.easeInOut,
+            transitionBuilder: (child, animation) {
+              return FadeTransition(
+                opacity: animation,
+                child: SlideTransition(
+                  position: Tween<Offset>(
+                    begin: const Offset(0, 0.1),
+                    end: Offset.zero,
+                  ).animate(animation),
+                  child: child,
                 ),
-              ),
-            )
-          else
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: (withinRange && !_claimingExploration)
-                    ? () => _claimPoi(poi)
-                    : null,
-                icon: _claimingExploration
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
+              );
+            },
+            child: alreadyClaimed
+                ? SizedBox(
+                    key: const ValueKey('claimed'),
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: null,
+                      icon: const Icon(TablerIcons.circle_check, size: 20),
+                      label: const Text('Reclamado'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: textSecondary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
                         ),
-                      )
-                    : const Icon(TablerIcons.gift, size: 20),
-                label: Text(
-                  withinRange
-                      ? 'Reclamar recompensa'
-                      : 'Acercate al punto para reclamar',
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: withinRange
-                      ? AppColors.primary
-                      : textSecondary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                  )
+                : SizedBox(
+                    key: const ValueKey('unclaimed'),
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: (withinRange && !_claimingExploration)
+                          ? () => _claimPoi(poi)
+                          : null,
+                      icon: _claimingExploration
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(TablerIcons.gift, size: 20),
+                      label: Text(
+                        withinRange
+                            ? 'Reclamar recompensa'
+                            : 'Acercate al punto para reclamar',
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: withinRange
+                            ? AppColors.primary
+                            : textSecondary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-              ),
-            ),
+          ),
         ],
       ),
     );
@@ -2587,20 +2605,20 @@ class _MapScreenState extends State<MapScreen>
 
       if (!mounted) return;
       final ok = result['success'] == true;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            ok
-                ? (result['message'] ?? 'Punto reclamado con éxito.')
-                : (result['message'] ?? 'No se pudo reclamar este punto.'),
+      if (!ok) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              result['message'] ?? 'No se pudo reclamar este punto.',
+            ),
+            backgroundColor: Colors.orange.shade700,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
-          backgroundColor: ok ? AppColors.primary : Colors.orange.shade700,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-      );
+        );
+      }
       if (ok) {
         final starterCollectible = (result['data'] is Map<String, dynamic>)
             ? (result['data']['starter_collectible'] as Map<String, dynamic>?)

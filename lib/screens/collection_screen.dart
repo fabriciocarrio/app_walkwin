@@ -208,6 +208,28 @@ class _CollectionScreenState extends State<CollectionScreen>
     final albumItems = _catalogCollectibles.map((catalogCard) {
       final unlocked = inventoryByCollectibleId[catalogCard.collectibleId];
       if (unlocked != null) {
+        if (unlocked.categoryImageUrl == null || unlocked.categoryImageUrl!.isEmpty) {
+          return CollectibleSpawnDto(
+            id: unlocked.id,
+            collectibleId: unlocked.collectibleId,
+            collectibleName: unlocked.collectibleName,
+            collectibleImageUrl: unlocked.collectibleImageUrl,
+            collectibleRarity: unlocked.collectibleRarity,
+            collectibleCategory: unlocked.collectibleCategory,
+            categoryImageUrl: catalogCard.categoryImageUrl,
+            collectibleSet: unlocked.collectibleSet,
+            lat: unlocked.lat,
+            lng: unlocked.lng,
+            distanceM: unlocked.distanceM,
+            interactionRadiusMeters: unlocked.interactionRadiusMeters,
+            rewardCoins: unlocked.rewardCoins,
+            province: unlocked.province,
+            department: unlocked.department,
+            claimed: unlocked.claimed,
+            quantity: unlocked.quantity,
+            rarityTier: unlocked.rarityTier,
+          );
+        }
         return unlocked;
       }
 
@@ -218,6 +240,7 @@ class _CollectionScreenState extends State<CollectionScreen>
         collectibleImageUrl: catalogCard.collectibleImageUrl,
         collectibleRarity: catalogCard.collectibleRarity,
         collectibleCategory: catalogCard.collectibleCategory,
+        categoryImageUrl: catalogCard.categoryImageUrl,
         collectibleSet: catalogCard.collectibleSet,
         lat: 0,
         lng: 0,
@@ -338,6 +361,17 @@ class _CollectionScreenState extends State<CollectionScreen>
           final catPct = totalCatCards > 0 ? (unlockedCatCards / totalCatCards) : 0.0;
           final color = _getCategoryHeaderColor(category);
 
+          final categoryCardWithSpecificImage = cards.cast<CollectibleSpawnDto?>().firstWhere(
+            (c) => c != null && c.categoryImageUrl != null && c.categoryImageUrl!.isNotEmpty,
+            orElse: () => null,
+          );
+          final categoryCardWithCollectibleImage = cards.cast<CollectibleSpawnDto?>().firstWhere(
+            (c) => c != null && c.collectibleImageUrl != null && c.collectibleImageUrl!.isNotEmpty,
+            orElse: () => null,
+          );
+          final categoryImageUrl = categoryCardWithSpecificImage?.categoryImageUrl ??
+              categoryCardWithCollectibleImage?.collectibleImageUrl;
+
           return GestureDetector(
             onTap: () async {
               await Navigator.of(context).push(
@@ -368,17 +402,30 @@ class _CollectionScreenState extends State<CollectionScreen>
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  // Placeholder for actual image
-                  // In the future this will be network image
-                  Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [color.withOpacity(0.5), color],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
+                  if (categoryImageUrl != null && categoryImageUrl.isNotEmpty)
+                    Image.network(
+                      categoryImageUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [color.withOpacity(0.5), color],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                        ),
+                      ),
+                    )
+                  else
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [color.withOpacity(0.5), color],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
                       ),
                     ),
-                  ),
                   Container(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
@@ -1003,6 +1050,17 @@ class _CategoryCollectionDetailScreenState
     final ratio = total == 0 ? 0.0 : unlockedCount / total;
     final headerColor = _getCategoryHeaderColor(widget.categoryName);
 
+    final bannerCardWithSpecificImage = widget.cards.cast<CollectibleSpawnDto?>().firstWhere(
+      (c) => c != null && c.categoryImageUrl != null && c.categoryImageUrl!.isNotEmpty,
+      orElse: () => null,
+    );
+    final bannerCardWithCollectibleImage = widget.cards.cast<CollectibleSpawnDto?>().firstWhere(
+      (c) => c != null && c.collectibleImageUrl != null && c.collectibleImageUrl!.isNotEmpty,
+      orElse: () => null,
+    );
+    final bannerImageUrl = bannerCardWithSpecificImage?.categoryImageUrl ??
+        bannerCardWithCollectibleImage?.collectibleImageUrl;
+
     // Apply filters
     List<CollectibleSpawnDto> filteredCards = widget.cards.where((c) {
       final isUnlocked = c.quantity > 0 || c.claimed;
@@ -1041,15 +1099,30 @@ class _CategoryCollectionDetailScreenState
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [headerColor.withOpacity(0.5), headerColor],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
+                      if (bannerImageUrl != null && bannerImageUrl.isNotEmpty)
+                        Image.network(
+                          bannerImageUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [headerColor.withOpacity(0.5), headerColor],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                            ),
+                          ),
+                        )
+                      else
+                        Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [headerColor.withOpacity(0.5), headerColor],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
                           ),
                         ),
-                      ),
                       Container(
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
@@ -1235,16 +1308,27 @@ class _CategoryCollectionDetailScreenState
           children: [
             Expanded(
               flex: 5,
-              child: Container(
-                color: Colors.grey.shade300,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(TablerIcons.lock, color: Colors.white, size: 28),
-                    const SizedBox(height: 8),
-                    Icon(TablerIcons.mountain, color: Colors.grey.shade400, size: 40),
-                  ],
-                ),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  if (item.collectibleImageUrl != null && item.collectibleImageUrl!.isNotEmpty)
+                    ColorFiltered(
+                      colorFilter: ColorFilter.mode(Colors.black.withOpacity(0.65), BlendMode.darken),
+                      child: Image.network(
+                        item.collectibleImageUrl!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(color: Colors.grey.shade400),
+                      ),
+                    )
+                  else
+                    Container(color: Colors.grey.shade300),
+                  const Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(TablerIcons.lock, color: Colors.white, size: 28),
+                    ],
+                  ),
+                ],
               ),
             ),
             Expanded(
@@ -1313,7 +1397,11 @@ class _CategoryCollectionDetailScreenState
                 fit: StackFit.expand,
                 children: [
                   item.collectibleImageUrl != null && item.collectibleImageUrl!.isNotEmpty
-                      ? Image.network(item.collectibleImageUrl!, fit: BoxFit.cover)
+                      ? Image.network(
+                          item.collectibleImageUrl!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Container(color: rarityColor.withOpacity(0.3)),
+                        )
                       : Container(color: rarityColor.withOpacity(0.3)),
                   Positioned(
                     top: 6,

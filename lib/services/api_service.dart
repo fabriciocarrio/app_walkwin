@@ -566,6 +566,14 @@ class ApiService {
       Uri.parse('$baseUrl/exploration/missions/$missionId/claim'),
       headers: _headers,
     );
+    if (response.statusCode >= 400) {
+      try {
+        final body = jsonDecode(response.body);
+        return body is Map<String, dynamic> ? body : {'success': false, 'message': 'Error al reclamar la recompensa'};
+      } catch (_) {
+        return {'success': false, 'message': 'Error del servidor (${response.statusCode})'};
+      }
+    }
     return jsonDecode(response.body);
   }
 

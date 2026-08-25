@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/models.dart';
 import '../services/api_service.dart';
 import '../theme/app_theme.dart';
@@ -14,6 +15,7 @@ class ClanListScreen extends StatefulWidget {
 }
 
 class _ClanListScreenState extends State<ClanListScreen> {
+  static const _storage = FlutterSecureStorage();
   List<ClanInfo> _clans = [];
   bool _loading = true;
   String? _selectedDepartment;
@@ -24,6 +26,7 @@ class _ClanListScreenState extends State<ClanListScreen> {
   void initState() {
     super.initState();
     _load();
+    _showClanOnboardingOnce();
   }
 
   @override
@@ -50,6 +53,119 @@ class _ClanListScreenState extends State<ClanListScreen> {
     } catch (_) {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  Future<void> _showClanOnboardingOnce() async {
+    const key = 'clan_onboarding_shown';
+    final shown = await _storage.read(key: key);
+    if (shown == 'true' || !mounted) return;
+    await _storage.write(key: key, value: 'true');
+    if (!mounted) return;
+
+    await showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withAlpha(25),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(TablerIcons.users, color: AppColors.primary, size: 36),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Bienvenido a los Clanes',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Unite a un grupo, caminá junto a tus compañeros y compitan por ser los mejores de su departamento.',
+                style: TextStyle(fontSize: 14, color: Colors.grey.shade600, height: 1.4),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 20),
+              _onboardingFeatureRow(
+                icon: TablerIcons.walk,
+                title: 'Generá influencia',
+                subtitle: 'Cada paso que des suma para tu clan.',
+              ),
+              const SizedBox(height: 10),
+              _onboardingFeatureRow(
+                icon: TablerIcons.trophy,
+                title: 'Escalá posiciones',
+                subtitle: 'Compití en rankings de departamento y globales.',
+              ),
+              const SizedBox(height: 10),
+              _onboardingFeatureRow(
+                icon: TablerIcons.calendar,
+                title: 'Temporadas',
+                subtitle: 'Cada 30 días arranca una nueva competencia.',
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  child: const Text(
+                    'Entendido',
+                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _onboardingFeatureRow({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+  }) {
+    return Row(
+      children: [
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: AppColors.primary.withAlpha(20),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(icon, color: AppColors.primary, size: 20),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+              const SizedBox(height: 2),
+              Text(subtitle, style: TextStyle(color: Colors.grey.shade500, fontSize: 12)),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 
   @override

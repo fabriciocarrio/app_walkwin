@@ -823,27 +823,35 @@ class _RewardsScreenState extends State<RewardsScreen>
                           ),
                         ],
                       ),
-                      SizedBox(
-                        height: 34,
-                        child: ElevatedButton(
-                          onPressed: canAfford
-                              ? () => _showRedeemSheet(business)
-                              : null,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: canAfford
-                                ? const Color(0xFF1A67F8)
-                                : Colors.grey,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 20),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
+                      Flexible(
+                        child: SizedBox(
+                          height: 34,
+                          child: OutlinedButton(
+                            onPressed: canAfford
+                                ? () => _showRedeemSheet(business)
+                                : null,
+                            style: OutlinedButton.styleFrom(
+                              backgroundColor: Colors.transparent,
+                              side: BorderSide(
+                                color: canAfford
+                                    ? const Color(0xFF1A67F8).withValues(alpha: 0.3)
+                                    : Colors.grey.shade300,
+                                width: 1,
+                              ),
+                              foregroundColor: canAfford
+                                  ? const Color(0xFF1A67F8)
+                                  : Colors.grey,
+                              padding: const EdgeInsets.symmetric(horizontal: 20),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
                             ),
-                          ),
-                          child: Text(
-                            canAfford ? 'Canjear' : 'PE inf.',
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
+                            child: Text(
+                              canAfford ? 'Canjear' : 'PE inf.',
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
                         ),

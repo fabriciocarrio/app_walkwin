@@ -43,7 +43,10 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _requestPermissions() async {
-    await [Permission.activityRecognition].request();
+    await [
+      Permission.activityRecognition,
+      Permission.notification,
+    ].request();
   }
 
   @override

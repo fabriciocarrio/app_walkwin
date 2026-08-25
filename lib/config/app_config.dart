@@ -48,4 +48,18 @@ class AppConfig {
     'POSTHOG_HOST',
     defaultValue: 'https://eu.posthog.com',
   );
+
+  /// Converts a relative path (e.g. /storage/...) into a full URL using apiBaseUrl.
+  static String? resolveUrl(String? url) {
+    if (url == null || url.trim().isEmpty) return null;
+    final trimmed = url.trim();
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      return trimmed;
+    }
+    final base = apiBaseUrl.replaceAll(RegExp(r'/api/v1/?$'), '');
+    if (trimmed.startsWith('/')) {
+      return '$base$trimmed';
+    }
+    return '$base/$trimmed';
+  }
 }

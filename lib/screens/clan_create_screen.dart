@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
+import '../services/analytics_service.dart';
 import '../theme/app_theme.dart';
 
 class ClanCreateScreen extends StatefulWidget {
@@ -23,6 +24,7 @@ class _ClanCreateScreenState extends State<ClanCreateScreen> {
   @override
   void initState() {
     super.initState();
+    AnalyticsService.instance.trackScreen('ClanCreateScreen');
     _loadProvinces();
   }
 

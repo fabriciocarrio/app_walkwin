@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/models.dart';
 import '../services/api_service.dart';
+import '../services/analytics_service.dart';
 import '../theme/app_theme.dart';
 import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 
@@ -30,6 +31,12 @@ class _CollectibleDetailScreenState extends State<CollectibleDetailScreen> {
   @override
   void initState() {
     super.initState();
+    AnalyticsService.instance.trackScreen('CollectibleDetailScreen');
+    AnalyticsService.instance.trackEvent('view_collectible_detail', properties: {
+      'collectible_id': widget.collectibleId,
+      'name': widget.item.collectibleName,
+      'rarity': widget.item.collectibleRarity,
+    });
     _quantity = widget.item.quantity;
     _rarity = widget.item.collectibleRarity;
     _loadDetail();

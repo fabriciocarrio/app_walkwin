@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../services/api_service.dart';
+import '../services/analytics_service.dart';
 import '../services/health_service.dart';
 import '../services/celebration_service.dart';
 import '../services/websocket_service.dart';
@@ -29,6 +30,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void initState() {
     super.initState();
+    AnalyticsService.instance.trackScreen('SettingsScreen');
     _loadSource();
     _loadCelebrationSettings();
     _checkHealthAuth();
@@ -822,6 +824,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _logout() async {
+    await AnalyticsService.instance.trackEvent('user_logout');
+    await AnalyticsService.instance.resetUser();
     await WebSocketService.instance.disconnect();
     await ApiService.logout();
     if (mounted) {

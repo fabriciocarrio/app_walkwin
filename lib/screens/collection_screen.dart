@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/models.dart';
 import '../services/api_service.dart';
+import '../services/analytics_service.dart';
 import '../services/notification_service.dart';
 import '../services/websocket_service.dart';
 import '../theme/app_theme.dart';
@@ -30,6 +31,7 @@ class _CollectionScreenState extends State<CollectionScreen>
   @override
   void initState() {
     super.initState();
+    AnalyticsService.instance.trackScreen('CollectionScreen');
     _tabController = TabController(length: 2, vsync: this);
     _loadData();
     _listenAchievementUnlocks();

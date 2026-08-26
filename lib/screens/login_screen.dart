@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/api_service.dart';
+import '../services/analytics_service.dart';
 import '../theme/app_theme.dart';
 import 'home_shell.dart';
 import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
@@ -18,6 +19,12 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _loading = false;
   bool _obscurePassword = true;
+
+  @override
+  void initState() {
+    super.initState();
+    AnalyticsService.instance.trackScreen('LoginScreen');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -354,11 +361,27 @@ class _LoginScreenState extends State<LoginScreen> {
         _passwordController.text,
       );
       if (result['token'] != null && mounted) {
+        final user = result['user'] as Map<String, dynamic>?;
+        final userId = user?['id']?.toString() ?? '';
+        final email = user?['email']?.toString() ?? _emailController.text;
+        final name = user?['name']?.toString();
+        if (userId.isNotEmpty) {
+          await AnalyticsService.instance.identifyUser(
+            userId: userId,
+            email: email,
+            name: name,
+          );
+        }
+        await AnalyticsService.instance.trackEvent('user_login_success');
+
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const HomeShell()),
         );
       } else {
+        await AnalyticsService.instance.trackEvent('user_login_failed', properties: {
+          'reason': result['message'] ?? 'Error al iniciar sesión',
+        });
         _showError(result['message'] ?? 'Error al iniciar sesión');
       }
     } catch (e, stackTrace) {

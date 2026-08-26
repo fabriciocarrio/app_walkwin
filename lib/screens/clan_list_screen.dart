@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/models.dart';
 import '../services/api_service.dart';
+import '../services/analytics_service.dart';
 import '../theme/app_theme.dart';
 import 'clan_create_screen.dart';
 import 'clan_detail_screen.dart';
@@ -25,6 +26,7 @@ class _ClanListScreenState extends State<ClanListScreen> {
   @override
   void initState() {
     super.initState();
+    AnalyticsService.instance.trackScreen('ClanListScreen');
     _load();
     _showClanOnboardingOnce();
   }

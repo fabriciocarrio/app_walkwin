@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/models.dart';
 import '../services/api_service.dart';
+import '../services/analytics_service.dart';
 import '../theme/app_theme.dart';
 import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 
@@ -33,6 +34,10 @@ class _ClanDetailScreenState extends State<ClanDetailScreen> {
   @override
   void initState() {
     super.initState();
+    AnalyticsService.instance.trackScreen('ClanDetailScreen');
+    AnalyticsService.instance.trackEvent('clan_detail_viewed', properties: {
+      'clan_id': widget.clanId,
+    });
     _load();
     if (widget.isViewingOwn) _showClanOnboardingOnce();
   }

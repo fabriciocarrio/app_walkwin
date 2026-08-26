@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../services/analytics_service.dart';
 import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -13,6 +14,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController _pageController = PageController();
   static const int _totalPages = 4;
   int _currentPage = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    AnalyticsService.instance.trackScreen('OnboardingScreen');
+  }
 
   @override
   void dispose() {

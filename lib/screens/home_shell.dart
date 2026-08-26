@@ -8,6 +8,7 @@ import 'settings_screen.dart';
 import '../models/models.dart';
 import '../theme/app_theme.dart';
 import '../services/websocket_service.dart';
+import '../services/analytics_service.dart';
 import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 
 class HomeShell extends StatefulWidget {
@@ -34,20 +35,39 @@ class _HomeShellState extends State<HomeShell> {
     super.dispose();
   }
 
+  void _trackTabChange(int index) {
+    setState(() => _currentIndex = index);
+    const screens = [
+      'DashboardScreen',
+      'CollectionScreen',
+      'MapScreen',
+      'RewardsScreen',
+      'ProfileScreen',
+      'SettingsScreen',
+    ];
+    if (index >= 0 && index < screens.length) {
+      AnalyticsService.instance.trackScreen(screens[index]);
+      AnalyticsService.instance.trackEvent('tab_switched', properties: {
+        'tab_index': index,
+        'tab_name': screens[index],
+      });
+    }
+  }
+
   void _goToPremios() {
-    setState(() => _currentIndex = 3);
+    _trackTabChange(3);
   }
 
   void _goToMap(Business? business) {
     setState(() {
-      _currentIndex = 2;
       _mapVersion++;
       _mapInitialBusiness = business;
     });
+    _trackTabChange(2);
   }
 
   void _openSettings() {
-    setState(() => _currentIndex = 5);
+    _trackTabChange(5);
   }
 
   List<Widget> get _pages => [
@@ -103,7 +123,7 @@ class _HomeShellState extends State<HomeShell> {
                             icon: TablerIcons.home,
                             label: 'Inicio',
                             selected: _currentIndex == 0,
-                            onTap: () => setState(() => _currentIndex = 0),
+                            onTap: () => _trackTabChange(0),
                             selectedColor: cs.primary,
                           ),
                         ),
@@ -112,7 +132,7 @@ class _HomeShellState extends State<HomeShell> {
                             icon: TablerIcons.backpack,
                             label: 'Colección',
                             selected: _currentIndex == 1,
-                            onTap: () => setState(() => _currentIndex = 1),
+                            onTap: () => _trackTabChange(1),
                             selectedColor: cs.primary,
                           ),
                         ),
@@ -120,10 +140,10 @@ class _HomeShellState extends State<HomeShell> {
                         const SizedBox(width: 72),
                         Expanded(
                           child: _NavItem(
-                            icon: TablerIcons.gift,
+                            icon: TablerIcons.ticket,
                             label: 'Premios',
                             selected: _currentIndex == 3,
-                            onTap: () => setState(() => _currentIndex = 3),
+                            onTap: () => _trackTabChange(3),
                             selectedColor: cs.primary,
                           ),
                         ),
@@ -132,7 +152,7 @@ class _HomeShellState extends State<HomeShell> {
                             icon: TablerIcons.user,
                             label: 'Perfil',
                             selected: _currentIndex == 4,
-                            onTap: () => setState(() => _currentIndex = 4),
+                            onTap: () => _trackTabChange(4),
                             selectedColor: cs.primary,
                           ),
                         ),

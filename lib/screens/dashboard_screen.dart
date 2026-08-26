@@ -22,6 +22,7 @@ import 'clan_list_screen.dart';
 import 'clan_detail_screen.dart';
 import 'clan_rankings_screen.dart';
 import '../config/app_config.dart';
+import '../services/analytics_service.dart';
 import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -95,6 +96,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   @override
   void initState() {
     super.initState();
+    AnalyticsService.instance.trackScreen('DashboardScreen');
     WidgetsBinding.instance.addObserver(this);
     _activeDayKey = _argentinaDateKey();
     _setupCelebrationAnimation();

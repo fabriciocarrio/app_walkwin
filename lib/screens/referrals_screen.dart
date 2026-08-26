@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
 import '../services/api_service.dart';
+import '../services/analytics_service.dart';
 import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 
 class ReferralsScreen extends StatefulWidget {
@@ -22,6 +23,7 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
   @override
   void initState() {
     super.initState();
+    AnalyticsService.instance.trackScreen('ReferralsScreen');
     _loadReferralInfo();
   }
 
@@ -48,6 +50,9 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
   void _copyCode() {
     if (_referralCode == null) return;
     Clipboard.setData(ClipboardData(text: _referralCode!));
+    AnalyticsService.instance.trackEvent('referral_code_copied', properties: {
+      'code': _referralCode!,
+    });
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Código copiado al portapapeles'),

@@ -7,6 +7,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 import '../services/api_service.dart';
+import '../services/analytics_service.dart';
 import '../config/app_config.dart';
 import '../models/models.dart';
 import '../theme/app_theme.dart';
@@ -82,6 +83,7 @@ class _MapScreenState extends State<MapScreen>
   @override
   void initState() {
     super.initState();
+    AnalyticsService.instance.trackScreen('MapScreen');
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),

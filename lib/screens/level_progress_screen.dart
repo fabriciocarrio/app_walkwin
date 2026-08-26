@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../services/analytics_service.dart';
 import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 
 class LevelProgressScreen extends StatelessWidget {
@@ -31,6 +32,7 @@ class LevelProgressScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AnalyticsService.instance.trackScreen('LevelProgressScreen');
     final safeMaxLevel = maxLevel < 1 ? _defaultMaxLevel : maxLevel;
     final resolvedIsMaxLevel = isMaxLevel || level >= safeMaxLevel;
     final denominator = nextLevelXp - levelStartXp;

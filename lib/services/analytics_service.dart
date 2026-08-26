@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:posthog_flutter/posthog_flutter.dart';
 import '../config/app_config.dart';
@@ -13,22 +14,27 @@ class AnalyticsService {
   Future<void> init() async {
     if (_initialized) return;
 
-    final config = PostHogConfig(AppConfig.posthogApiKey)
-      ..host = AppConfig.posthogHost
-      ..captureApplicationLifecycleEvents = true;
+    try {
+      final config = PostHogConfig(AppConfig.posthogApiKey)
+        ..host = AppConfig.posthogHost
+        ..captureApplicationLifecycleEvents = true;
 
-    await Posthog().setup(config);
-
-    _initialized = true;
+      await Posthog().setup(config);
+      _initialized = true;
+    } catch (e) {
+      debugPrint('AnalyticsService init error: $e');
+    }
   }
 
   // ── Screen tracking ──
 
   Future<void> trackScreen(String screenName) async {
-    await _firebase.logScreenView(screenName: screenName);
-    await Posthog().screen(
-      screenName: screenName,
-    );
+    try {
+      await _firebase.logScreenView(screenName: screenName);
+      await Posthog().screen(screenName: screenName);
+    } catch (e) {
+      debugPrint('AnalyticsService trackScreen error: $e');
+    }
   }
 
   // ── Event tracking ──
@@ -37,11 +43,15 @@ class AnalyticsService {
     String name, {
     Map<String, Object>? properties,
   }) async {
-    await _firebase.logEvent(
-      name: name,
-      parameters: properties,
-    );
-    await Posthog().capture(eventName: name, properties: properties);
+    try {
+      await _firebase.logEvent(
+        name: name,
+        parameters: properties,
+      );
+      await Posthog().capture(eventName: name, properties: properties);
+    } catch (e) {
+      debugPrint('AnalyticsService trackEvent error: $e');
+    }
   }
 
   // ── User identification ──
@@ -52,25 +62,33 @@ class AnalyticsService {
     String? name,
     Map<String, Object>? properties,
   }) async {
-    await _firebase.setUserId(id: userId);
-    if (email != null) {
-      await _firebase.setUserProperty(name: 'email', value: email);
+    try {
+      await _firebase.setUserId(id: userId);
+      if (email != null) {
+        await _firebase.setUserProperty(name: 'email', value: email);
+      }
+
+      final allProperties = <String, Object>{
+        if (email != null) 'email': email,
+        if (name != null) 'name': name,
+        if (properties != null) ...properties,
+      };
+
+      await Posthog().identify(
+        userId: userId,
+        userProperties: allProperties,
+      );
+    } catch (e) {
+      debugPrint('AnalyticsService identifyUser error: $e');
     }
-
-    final allProperties = <String, Object>{
-      if (email != null) 'email': email,
-      if (name != null) 'name': name,
-      if (properties != null) ...properties,
-    };
-
-    await Posthog().identify(
-      userId: userId,
-      userProperties: allProperties,
-    );
   }
 
   Future<void> resetUser() async {
-    await _firebase.setUserId(id: null);
-    await Posthog().reset();
+    try {
+      await _firebase.setUserId(id: null);
+      await Posthog().reset();
+    } catch (e) {
+      debugPrint('AnalyticsService resetUser error: $e');
+    }
   }
 }

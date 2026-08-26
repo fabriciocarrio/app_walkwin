@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import '../services/analytics_service.dart';
 import 'referrals_screen.dart';
 import 'minigames_screen.dart';
 import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
@@ -9,6 +10,7 @@ class EarnPeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AnalyticsService.instance.trackScreen('EarnPeScreen');
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg = isDark ? AppColors.bgDark : AppColors.bgLight;
     final card = isDark ? AppColors.cardDark : AppColors.cardLight;

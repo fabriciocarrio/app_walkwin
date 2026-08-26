@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../models/models.dart';
 import '../services/api_service.dart';
+import '../services/analytics_service.dart';
 import '../theme/app_theme.dart';
 import 'business_profile_screen.dart';
 import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
@@ -54,6 +55,7 @@ class _RewardsScreenState extends State<RewardsScreen>
   @override
   void initState() {
     super.initState();
+    AnalyticsService.instance.trackScreen('RewardsScreen');
     _tabController = TabController(length: 2, vsync: this);
     _loadData();
   }

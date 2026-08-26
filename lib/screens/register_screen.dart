@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/api_service.dart';
+import '../services/analytics_service.dart';
 import '../theme/app_theme.dart';
 import 'home_shell.dart';
 import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
@@ -29,6 +30,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   void initState() {
     super.initState();
+    AnalyticsService.instance.trackScreen('RegisterScreen');
     _loadProvinces();
   }
 
@@ -463,10 +465,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
       );
 
       if (result['token'] != null && mounted) {
-        final bonusPe = result['referral_bonus_pe'] as int? ?? 0;
-        final referralType = result['referral_type'] as String?;
-        if (bonusPe > 0 && referralType != null && mounted) {
-          // Mostrar pantalla de bienvenida con el bono antes de ir al home
+        final user = result['user'] as Map<String, dynamic>?;
+        final userId = user?['id']?.toString() ?? '';
+        final email = user?['email']?.toString() ?? _emailController.text;
+        final name = user?['name']?.toString() ?? _nameController.text;
+        if (userId.isNotEmpty) {
+          await AnalyticsService.instance.identifyUser(
+            userId: userId,
+            email: email,
+            name: name,
+          );
+        }
+        await AnalyticsService.instance.trackEvent('user_register_success');
+
+        final bonusPe = (result['referral_bonus_pe'] as num?)?.toInt() ?? 0;
+        if (bonusPe > 0) {
           await _showReferralBonus(bonusPe);
         }
         if (mounted) {
@@ -476,6 +489,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           );
         }
       } else {
+        await AnalyticsService.instance.trackEvent('user_register_failed');
         // Verificar si hay error específico del campo referral_code
         final errors = result['errors'] as Map<String, dynamic>?;
         final referralErrors = errors?['referral_code'] as List<dynamic>?;

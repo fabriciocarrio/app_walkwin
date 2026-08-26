@@ -242,7 +242,8 @@ class _MapLibreTestScreenState extends State<MapLibreTestScreen> {
 
           if (_vectorStyleError != null)
             Positioned(
-              center: 0,
+              left: 16,
+              right: 16,
               top: 100,
               child: Container(
                 padding: const EdgeInsets.all(12),

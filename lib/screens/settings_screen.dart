@@ -10,6 +10,7 @@ import '../services/step_counting_service.dart';
 import '../theme/app_theme.dart';
 import '../main.dart';
 import 'profile_screen.dart';
+import 'maplibre_test_screen.dart';
 import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -359,6 +360,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 textPrimary: textPrimary,
                 textSecondary: textSecondary,
                 onTap: () {},
+              ),
+              _buildMenuItem(
+                icon: TablerIcons.map_2,
+                title: 'Probar MapLibre GL (Vectores)',
+                isDark: isDark,
+                card: card,
+                textPrimary: textPrimary,
+                textSecondary: textSecondary,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const MapLibreTestScreen()),
+                ),
               ),
 
               const SizedBox(height: 24),

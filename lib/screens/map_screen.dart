@@ -958,12 +958,7 @@ class _MapScreenState extends State<MapScreen>
               children: [
                 TileLayer(
                   urlTemplate:
-                      'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',
-                  userAgentPackageName: 'com.walkwin.app',
-                ),
-                TileLayer(
-                  urlTemplate:
-                      'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}',
+                      'https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png',
                   userAgentPackageName: 'com.walkwin.app',
                 ),
                 if (_exploredTiles.isNotEmpty)

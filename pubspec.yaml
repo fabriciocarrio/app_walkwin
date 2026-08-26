@@ -59,10 +59,6 @@ dependencies:
   firebase_core: ^3.12.1
   firebase_analytics: ^11.4.4
   flutter_tabler_icons: ^1.43.0
-  maplibre_gl: ^0.27.0
-  vector_map_tiles: ^9.0.0-beta.7
-  vector_tile_renderer: ^6.1.0
-
 dev_dependencies:
   flutter_test:
     sdk: flutter

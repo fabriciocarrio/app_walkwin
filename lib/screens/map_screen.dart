@@ -958,7 +958,8 @@ class _MapScreenState extends State<MapScreen>
               children: [
                 TileLayer(
                   urlTemplate:
-                      'https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png',
+                      'https://{s}.tile.jawg.io/jawg-light/{z}/{x}/{y}.png',
+                  subdomains: const ['a', 'b', 'c', 'd'],
                   userAgentPackageName: 'com.walkwin.app',
                 ),
                 if (_exploredTiles.isNotEmpty)

@@ -569,11 +569,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
           final granted = await HealthService.requestAuthorization();
           if (!granted && mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text(
-                  'Permiso denegado. Revisá los ajustes del dispositivo.',
+              SnackBar(
+                content: const Text(
+                  'Permiso no otorgado. Abrí Health Connect para habilitarlo.',
                 ),
                 behavior: SnackBarBehavior.floating,
+                action: SnackBarAction(
+                  label: 'Abrir',
+                  onPressed: () async {
+                    await HealthService.openHealthConnectSettings();
+                  },
+                ),
               ),
             );
             return;

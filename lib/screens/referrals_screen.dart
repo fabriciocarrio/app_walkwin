@@ -75,7 +75,13 @@ class _ReferralsScreenState extends State<ReferralsScreen> {
           children: [
             Icon(TablerIcons.share, color: Colors.white, size: 16),
             SizedBox(width: 8),
-            Text('Texto copiado ¡compártilo por WhatsApp!'),
+            Expanded(
+              child: Text(
+                'Texto copiado. ¡Compártilo por WhatsApp!',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           ],
         ),
         backgroundColor: const Color(0xFF10B981),

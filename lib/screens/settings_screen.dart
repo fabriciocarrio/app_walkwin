@@ -556,7 +556,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text(
-                      'Health Connect no está instalado. Se abrió Play Store para instalarlo y volver a intentar.',
+                      'Health Connect no instalado. Se abrió Play Store.',
                     ),
                     behavior: SnackBarBehavior.floating,
                   ),
@@ -571,7 +571,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: const Text(
-                  'Permiso no otorgado. Abrí Health Connect para habilitarlo.',
+                  'Permiso no otorgado en Health Connect.',
                 ),
                 behavior: SnackBarBehavior.floating,
                 action: SnackBarAction(
@@ -635,20 +635,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
+                  Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 8,
+                    runSpacing: 4,
                     children: [
-                      Flexible(
-                        child: Text(
-                          title,
-                          style: TextStyle(
-                            color: textPrimary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                          overflow: TextOverflow.ellipsis,
+                      Text(
+                        title,
+                        style: TextStyle(
+                          color: textPrimary,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                      if (isHealthSource) ...[
-                        const SizedBox(width: 8),
+                      if (isHealthSource)
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 6,
@@ -692,7 +691,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             ],
                           ),
                         ),
-                      ],
                     ],
                   ),
                   const SizedBox(height: 2),

@@ -639,6 +639,14 @@ class _DashboardScreenState extends State<DashboardScreen>
   Future<void> _loadStats() async {
     if (mounted) setState(() => _loading = true);
     try {
+      final currentDayKey = _argentinaDateKey();
+      if (currentDayKey != _activeDayKey) {
+        _activeDayKey = currentDayKey;
+        await StepCountingService.instance.resetSession();
+        _steps = 0;
+        _lastSyncedSteps = 0;
+      }
+
       final stats = await ApiService.getStats();
       if (mounted) {
         final nextBaseSteps = (stats['today_steps'] as int?) ?? _steps;

@@ -168,12 +168,20 @@ class StepCountingService {
 
     if (restoredVal != null) {
       _lastAcceptedSensorValue = restoredVal;
-      if (restoredDate == today &&
-          restoredSession != null &&
-          restoredSession > 0) {
-        sessionStepsNotifier.value = restoredSession;
-        isRunning.value = true;
-      }
+    }
+
+    if (restoredDate != today) {
+      // Si la fecha restaurada no es hoy, limpiar sesiones previas de almacenamiento
+      // para evitar arrastrar pasos del día anterior tras reinicio o actualización.
+      sessionStepsNotifier.value = 0;
+      isRunning.value = false;
+      await _storage.write(key: _keySessionSteps, value: '0');
+      await _storage.write(key: _keyBgDaily, value: '0');
+      await _storage.write(key: _keyLastSensorDate, value: today);
+      await _storage.write(key: _keyBgDate, value: today);
+    } else if (restoredSession != null && restoredSession > 0) {
+      sessionStepsNotifier.value = restoredSession;
+      isRunning.value = true;
     }
   }
 
@@ -314,10 +322,13 @@ class StepCountingService {
     }
   }
 
-  void resetSession() {
+  Future<void> resetSession() async {
     _lastAcceptedStepTime = null;
     sessionStepsNotifier.value = 0;
-    _persistCurrentState();
+    isRunning.value = false;
+    await _storage.write(key: _keySessionSteps, value: '0');
+    await _storage.write(key: _keyBgDaily, value: '0');
+    await _persistCurrentState();
   }
 
   void dispose() {

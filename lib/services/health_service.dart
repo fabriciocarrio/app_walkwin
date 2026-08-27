@@ -7,56 +7,33 @@ class HealthService {
   static const _types = [HealthDataType.STEPS];
 
   /// Request authorization from Google Health Connect / Apple Health.
-  /// On Android, this launches the Health Connect system dialog directly.
-  /// On repeated denial, opens Health Connect settings so the user can
-  /// manually grant access without leaving to the phone Settings.
+  ///
+  /// Flujo:
+  /// 1. Solicita ACTIVITY_RECOGNITION (necesario en Android 10+).
+  /// 2. Lanza el diálogo nativo de Health Connect (requiere FlutterFragmentActivity).
+  /// 3. Devuelve true solo si el resultado fue positivo.
+  ///
+  /// NOTA: en Android, `hasPermissions()` siempre devuelve null — limitación
+  /// de la API de Health Connect. No intentar leer datos para "verificar" el
+  /// permiso porque eso lanza SecurityException si no fue otorgado.
   static Future<bool> requestAuthorization() async {
-    // 1. Request ACTIVITY_RECOGNITION first (needed on Android 10+)
+    // 1. Solicitar permiso de reconocimiento de actividad (Android 10+)
     try {
       await Permission.activityRecognition.request();
     } catch (_) {}
 
     try {
-      // 2. Check if already authorized — skip dialog if so
-      final hasPerms = await _health.hasPermissions(
-        _types,
-        permissions: [HealthDataAccess.READ],
-      );
-      if (hasPerms == true) return true;
-
-      // 3. Launch the native Health Connect permission dialog
+      // 2. Lanzar el diálogo nativo de Health Connect
+      //    Requiere que MainActivity extienda FlutterFragmentActivity
       final granted = await _health.requestAuthorization(
         _types,
         permissions: [HealthDataAccess.READ],
       );
-
-      // 4. Double-check via hasPermissions (HC sometimes returns false even
-      //    when the user actually granted access — known upstream issue)
-      if (granted) return true;
-
-      final confirmedAfter = await _health.hasPermissions(
-        _types,
-        permissions: [HealthDataAccess.READ],
-      );
-      if (confirmedAfter == true) return true;
-
-      // 5. Fallback: try to actually read steps — if it works, we have access
-      final steps = await getTodaySteps();
-      return steps != null;
+      return granted;
     } catch (_) {
-      // If requestAuthorization throws (e.g. dialog already blocked by OS),
-      // try reading data; if successful, permission was already granted.
-      try {
-        final hasPerms = await _health.hasPermissions(
-          _types,
-          permissions: [HealthDataAccess.READ],
-        );
-        if (hasPerms == true) return true;
-        final steps = await getTodaySteps();
-        return steps != null;
-      } catch (_) {
-        return false;
-      }
+      // Si el diálogo fue bloqueado por el OS (denegado 2 veces),
+      // requestAuthorization lanza excepción — devolver false limpiamente
+      return false;
     }
   }
 
@@ -69,8 +46,8 @@ class HealthService {
   static Future<void> promptInstallHealthConnect() =>
       _health.installHealthConnect();
 
-  /// Open the Health Connect app's permission screen for this app.
-  /// Use this when the OS has blocked showing the system dialog (denied twice).
+  /// Open the Health Connect app's permission screen for this app directly.
+  /// Usar cuando el OS bloqueó el diálogo por denegaciones previas.
   static Future<void> openHealthConnectSettings() async {
     try {
       await _health.requestAuthorization(
@@ -82,6 +59,7 @@ class HealthService {
 
   /// Get total steps for today from the health platform.
   /// Returns null if unavailable or permission denied.
+  /// ONLY call this after requestAuthorization() returned true.
   static Future<int?> getTodaySteps() async {
     final now = DateTime.now();
     final midnight = DateTime(now.year, now.month, now.day);
@@ -91,7 +69,7 @@ class HealthService {
         endTime: now,
         types: _types,
       );
-      if (data.isEmpty) return null;
+      if (data.isEmpty) return 0;
       final deduplicated = _health.removeDuplicates(data);
       int total = 0;
       for (final point in deduplicated) {

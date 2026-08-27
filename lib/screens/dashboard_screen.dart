@@ -562,6 +562,11 @@ class _DashboardScreenState extends State<DashboardScreen>
     final stepsAtStart = _sessionSteps;
 
     if (_stepSource == 'google_fit' || _stepSource == 'healthkit') {
+      // Solo leer de Health Connect si el permiso fue previamente otorgado
+      final authKey = _stepSource == 'google_fit' ? 'google_fit_authorized' : 'healthkit_authorized';
+      final authVal = await _storage.read(key: authKey);
+      if (authVal != 'true') return; // Permiso no otorgado — no intentar leer
+
       final healthSteps = await HealthService.getTodaySteps();
       if (healthSteps != null && healthSteps > 0) {
         StepCountingService.instance.resetSession();

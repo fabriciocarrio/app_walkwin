@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/api_service.dart';
+import '../services/google_auth_service.dart';
 import '../theme/app_theme.dart';
 import 'home_shell.dart';
 import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
@@ -263,9 +264,78 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ),
                   ),
                 ),
-                
-                const SizedBox(height: 40),
-                
+
+                const SizedBox(height: 24),
+
+                // Divider "o"
+                Row(
+                  children: [
+                    Expanded(
+                      child: Divider(color: subtitleColor.withAlpha(80)),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Text(
+                        'o registrarse con',
+                        style: GoogleFonts.montserrat(
+                          color: subtitleColor,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: Divider(color: subtitleColor.withAlpha(80)),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 24),
+
+                // Google Register Button
+                SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: OutlinedButton(
+                    onPressed: _loading ? null : _registerWithGoogle,
+                    style: OutlinedButton.styleFrom(
+                      backgroundColor:
+                          isDark ? AppColors.cardDark : Colors.white,
+                      side: BorderSide(
+                        color: isDark
+                            ? Colors.white24
+                            : const Color(0xFFE2E8F0),
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          TablerIcons.brand_google,
+                          color: isDark
+                              ? Colors.white
+                              : const Color(0xFFEA4335),
+                          size: 22,
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          'Registrarse con Google',
+                          style: GoogleFonts.montserrat(
+                            color: titleColor,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 36),
+
                 // Login Link
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -490,6 +560,39 @@ class _RegisterScreenState extends State<RegisterScreen> {
       }
     } catch (e) {
       _showError('Error de conexión');
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _registerWithGoogle() async {
+    setState(() {
+      _loading = true;
+      _referralError = null;
+    });
+    try {
+      final result = await GoogleAuthService.signInWithGoogle(
+        province: _selectedProvince,
+        referralCode: _referralController.text.trim(),
+      );
+
+      if (result != null && result['token'] != null && mounted) {
+        final bonusPe = result['referral_bonus_pe'] as int? ?? 0;
+        final referralType = result['referral_type'] as String?;
+        if (bonusPe > 0 && referralType != null && mounted) {
+          await _showReferralBonus(bonusPe);
+        }
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const HomeShell()),
+          );
+        }
+      } else if (result != null) {
+        _showError(result['message'] ?? 'Error al registrar con Google');
+      }
+    } catch (e) {
+      _showError('Error de autenticación con Google: $e');
     } finally {
       if (mounted) setState(() => _loading = false);
     }

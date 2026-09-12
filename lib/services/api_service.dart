@@ -116,6 +116,32 @@ class ApiService {
     return data;
   }
 
+  static Future<Map<String, dynamic>> googleLogin({
+    required String idToken,
+    String? province,
+    String? referralCode,
+  }) async {
+    final Map<String, dynamic> body = {'id_token': idToken};
+    if (province != null && province.isNotEmpty) {
+      body['province'] = province;
+    }
+    if (referralCode != null && referralCode.isNotEmpty) {
+      body['referral_code'] = referralCode;
+    }
+
+    final response = await http.post(
+      Uri.parse('$baseUrl/auth/google'),
+      headers: _headers,
+      body: jsonEncode(body),
+    );
+
+    final data = jsonDecode(response.body);
+    if ((response.statusCode == 200 || response.statusCode == 201) && data['token'] != null) {
+      await setToken(data['token']);
+    }
+    return data;
+  }
+
   static Future<Map<String, dynamic>> getStats() async {
     final response = await http
         .get(Uri.parse('$baseUrl/user/stats'), headers: _headers)

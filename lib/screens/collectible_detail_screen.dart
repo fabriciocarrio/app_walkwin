@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/models.dart';
 import '../services/api_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/holographic_card_widget.dart';
 import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 
 class CollectibleDetailScreen extends StatefulWidget {
@@ -292,150 +293,23 @@ class _CollectibleDetailScreenState extends State<CollectibleDetailScreen> {
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
-            expandedHeight: 340,
+            expandedHeight: 380,
             pinned: true,
             backgroundColor: bg,
             flexibleSpace: FlexibleSpaceBar(
-              background: Stack(
-                fit: StackFit.expand,
-                children: [
-                  // Card Header Preview Container with Glowing Border matching gamification_cards.png
-                  Padding(
-                    padding: const EdgeInsets.only(top: 60, left: 16, right: 16, bottom: 16),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(24),
-                        border: Border.all(color: rarityColor, width: 3),
-                        boxShadow: [
-                          BoxShadow(
-                            color: rarityColor.withOpacity(0.35),
-                            blurRadius: 20,
-                            spreadRadius: 2,
-                            offset: const Offset(0, 8),
-                          )
-                        ],
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(21),
-                        child: Stack(
-                          fit: StackFit.expand,
-                          children: [
-                            if (widget.item.collectibleImageUrl != null &&
-                                widget.item.collectibleImageUrl!.isNotEmpty)
-                              Image.network(
-                                widget.item.collectibleImageUrl!,
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => Container(
-                                  color: rarityColor.withOpacity(0.2),
-                                  child: Icon(TablerIcons.photo, size: 80, color: rarityColor),
-                                ),
-                              )
-                            else
-                              Container(
-                                color: rarityColor.withOpacity(0.2),
-                                child: Icon(TablerIcons.photo, size: 80, color: rarityColor),
-                              ),
-
-                            // Overlay Gradient
-                            Container(
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [
-                                    Colors.black.withOpacity(0.4),
-                                    Colors.transparent,
-                                    Colors.black.withOpacity(0.85),
-                                  ],
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomCenter,
-                                  stops: const [0.0, 0.4, 1.0],
-                                ),
-                              ),
-                            ),
-
-                            // Holographic Rarity Badge (Top Left)
-                            Positioned(
-                              top: 14,
-                              left: 14,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                decoration: BoxDecoration(
-                                  gradient: rarityGradient,
-                                  borderRadius: BorderRadius.circular(12),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: rarityColor.withOpacity(0.5),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    const Icon(TablerIcons.sparkles, color: Colors.white, size: 14),
-                                    const SizedBox(width: 5),
-                                    Text(
-                                      _rarity.toUpperCase(),
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w800,
-                                        letterSpacing: 1,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-
-                            // Card Name & Category Badge (Bottom Left)
-                            Positioned(
-                              bottom: 16,
-                              left: 16,
-                              right: 16,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    widget.item.collectibleName,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 24,
-                                      fontWeight: FontWeight.bold,
-                                      shadows: [
-                                        Shadow(color: Colors.black54, blurRadius: 6, offset: Offset(0, 2)),
-                                      ],
-                                    ),
-                                  ),
-                                  if (widget.item.collectibleCategory != null &&
-                                      widget.item.collectibleCategory!.isNotEmpty)
-                                    Padding(
-                                      padding: const EdgeInsets.only(top: 4),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                                        decoration: BoxDecoration(
-                                          color: Colors.white.withOpacity(0.2),
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
-                                        child: Text(
-                                          widget.item.collectibleCategory!,
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+              background: Container(
+                padding: const EdgeInsets.only(top: 50, bottom: 10),
+                child: HolographicCardWidget(
+                  imageUrl: widget.item.collectibleImageUrl,
+                  title: widget.item.collectibleName,
+                  rarity: _rarity,
+                  isHolographic: _detail?['is_holographic'] == true || widget.item.isHolographic,
+                  province: widget.item.province,
+                  category: widget.item.collectibleCategory,
+                  description: widget.item.description,
+                  width: 250,
+                  height: 340,
+                ),
               ),
             ),
           ),

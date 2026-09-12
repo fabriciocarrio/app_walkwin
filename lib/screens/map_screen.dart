@@ -10,6 +10,9 @@ import '../services/api_service.dart';
 import '../config/app_config.dart';
 import '../models/models.dart';
 import '../theme/app_theme.dart';
+import '../services/expedition_service.dart';
+import '../widgets/expedition_overlay_widget.dart';
+import '../widgets/expedition_summary_card.dart';
 import 'business_profile_screen.dart';
 import 'qr_scanner_screen.dart';
 import 'tourist_poi_profile_screen.dart';
@@ -54,6 +57,17 @@ class _MapScreenState extends State<MapScreen>
   bool _showBusinesses = true;
   bool _showTouristPois = true;
   bool _showDynamicSpawns = true;
+
+  final ExpeditionService _expeditionService = ExpeditionService();
+
+  void _handleFinishExpedition() {
+    final result = _expeditionService.stopExpedition();
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => ExpeditionSummaryCardDialog(result: result),
+    );
+  }
 
   // ── Filtros del buscador ──────────────────────────────────
   double? _filterMaxDistanceM; // null = sin límite
@@ -1125,6 +1139,31 @@ class _MapScreenState extends State<MapScreen>
                       ),
                     ],
                   ),
+                // Trazado de expedición en tiempo real (Neón)
+                ListenableBuilder(
+                  listenable: _expeditionService,
+                  builder: (_, __) {
+                    if (_expeditionService.routePoints.length < 2) {
+                      return const SizedBox.shrink();
+                    }
+                    return PolylineLayer(
+                      polylines: [
+                        // Resplandor Neón Exterior (Glow)
+                        Polyline(
+                          points: _expeditionService.routePoints,
+                          strokeWidth: 9.0,
+                          color: const Color(0xFF00E5FF).withValues(alpha: 0.4),
+                        ),
+                        // Núcleo Neón Interior (Core)
+                        Polyline(
+                          points: _expeditionService.routePoints,
+                          strokeWidth: 4.0,
+                          color: const Color(0xFF00E5FF),
+                        ),
+                      ],
+                    );
+                  },
+                ),
               ],
             ),
             Positioned(
@@ -1241,6 +1280,20 @@ class _MapScreenState extends State<MapScreen>
                   : 70,
               left: 16,
               child: _buildExplorationBadge(isDark),
+            ),
+            // Overlay Flotante para Control de Expedición
+            Positioned(
+              bottom: (_selectedBusiness != null ||
+                      _selectedPoi != null ||
+                      _selectedSpawn != null)
+                  ? 250
+                  : 10,
+              left: 0,
+              right: 0,
+              child: ExpeditionOverlayWidget(
+                expeditionService: _expeditionService,
+                onFinishRequested: _handleFinishExpedition,
+              ),
             ),
             if (_loading)
               Container(

@@ -645,6 +645,7 @@ class CollectibleSpawnDto {
   final bool claimed;
   final int quantity;
   final int rarityTier;
+  final bool isHolographic;
 
   CollectibleSpawnDto({
     required this.id,
@@ -665,6 +666,7 @@ class CollectibleSpawnDto {
     this.claimed = false,
     this.quantity = 1,
     this.rarityTier = 0,
+    this.isHolographic = false,
   });
 
   factory CollectibleSpawnDto.fromJson(Map<String, dynamic> json) {
@@ -729,6 +731,7 @@ class CollectibleSpawnDto {
       claimed: json['claimed'] == true,
       quantity: (json['quantity'] as num?)?.toInt() ?? 1,
       rarityTier: (json['rarity_tier'] as num?)?.toInt() ?? 0,
+      isHolographic: json['is_holographic'] == true || collectible['is_holographic'] == true,
     );
   }
 }

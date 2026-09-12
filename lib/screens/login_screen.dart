@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/api_service.dart';
+import '../services/google_auth_service.dart';
 import '../theme/app_theme.dart';
 import 'home_shell.dart';
 import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
@@ -193,7 +194,76 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
 
-                    const SizedBox(height: 48),
+                    const SizedBox(height: 24),
+
+                    // Divider "o"
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Divider(color: subtitleColor.withAlpha(80)),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Text(
+                            'o continuar con',
+                            style: GoogleFonts.montserrat(
+                              color: subtitleColor,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: Divider(color: subtitleColor.withAlpha(80)),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // Google Login Button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 56,
+                      child: OutlinedButton(
+                        onPressed: _loading ? null : _loginWithGoogle,
+                        style: OutlinedButton.styleFrom(
+                          backgroundColor:
+                              isDark ? AppColors.cardDark : Colors.white,
+                          side: BorderSide(
+                            color: isDark
+                                ? Colors.white24
+                                : const Color(0xFFE2E8F0),
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              TablerIcons.brand_google,
+                              color: isDark
+                                  ? Colors.white
+                                  : const Color(0xFFEA4335),
+                              size: 22,
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              'Continuar con Google',
+                              style: GoogleFonts.montserrat(
+                                color: titleColor,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 36),
 
                     // Register Link
                     Row(
@@ -367,6 +437,25 @@ class _LoginScreenState extends State<LoginScreen> {
       debugPrint('Stacktrace: $stackTrace');
       debugPrint('================================================');
       _showError('Error de conexión: $e');
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _loginWithGoogle() async {
+    setState(() => _loading = true);
+    try {
+      final result = await GoogleAuthService.signInWithGoogle();
+      if (result != null && result['token'] != null && mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const HomeShell()),
+        );
+      } else if (result != null) {
+        _showError(result['message'] ?? 'Error al iniciar sesión con Google');
+      }
+    } catch (e) {
+      _showError('Error al autenticar con Google: $e');
     } finally {
       if (mounted) setState(() => _loading = false);
     }

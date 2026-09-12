@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/api_service.dart';
 import '../services/google_auth_service.dart';
+import '../services/analytics_service.dart';
 import '../theme/app_theme.dart';
 import 'home_shell.dart';
 import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
@@ -30,6 +31,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   void initState() {
     super.initState();
+    AnalyticsService.instance.trackScreen('RegisterScreen');
     _loadProvinces();
   }
 
@@ -58,10 +60,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg = isDark ? AppColors.bgDark : const Color(0xFFF8FAFC);
-    
-    final titleColor = isDark ? AppColors.textPrimaryDark : const Color(0xFF112A46);
-    final subtitleColor = isDark ? AppColors.textSecondaryDark : const Color(0xFF3B4D63);
-    final labelColor = isDark ? AppColors.textPrimaryDark : const Color(0xFF112A46);
+
+    final titleColor = isDark
+        ? AppColors.textPrimaryDark
+        : const Color(0xFF112A46);
+    final subtitleColor = isDark
+        ? AppColors.textSecondaryDark
+        : const Color(0xFF3B4D63);
+    final labelColor = isDark
+        ? AppColors.textPrimaryDark
+        : const Color(0xFF112A46);
 
     return Scaffold(
       backgroundColor: bg,
@@ -74,12 +82,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const SizedBox(height: 50),
-                
+
                 // Logo EXPLORIA
                 Center(child: _buildLogo()),
-                
+
                 const SizedBox(height: 30),
-                
+
                 // Title
                 Text(
                   'Crear cuenta',
@@ -91,7 +99,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                
+
                 // Subtitle
                 Text(
                   'Empezá a ganar Puntos\nExploria caminando.',
@@ -103,9 +111,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     height: 1.4,
                   ),
                 ),
-                
+
                 const SizedBox(height: 40),
-                
+
                 // Fields
                 _buildLabel('Nombre', labelColor),
                 const SizedBox(height: 8),
@@ -114,9 +122,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   hint: 'Juan Pérez',
                   isDark: isDark,
                 ),
-                
+
                 const SizedBox(height: 20),
-                
+
                 _buildLabel('Email', labelColor),
                 const SizedBox(height: 8),
                 _buildField(
@@ -125,9 +133,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   keyboardType: TextInputType.emailAddress,
                   isDark: isDark,
                 ),
-                
+
                 const SizedBox(height: 20),
-                
+
                 _buildLabel('Contraseña', labelColor),
                 const SizedBox(height: 8),
                 _buildField(
@@ -137,9 +145,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   isDark: isDark,
                   suffix: IconButton(
                     icon: Icon(
-                      _obscurePassword
-                          ? TablerIcons.eye_off
-                          : TablerIcons.eye,
+                      _obscurePassword ? TablerIcons.eye_off : TablerIcons.eye,
                       color: subtitleColor,
                       size: 22,
                     ),
@@ -147,12 +153,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         setState(() => _obscurePassword = !_obscurePassword),
                   ),
                 ),
-                
+
                 const SizedBox(height: 20),
 
                 _buildLabel('Provincia', labelColor),
                 const SizedBox(height: 8),
-                _buildProvinceDropdown(isDark: isDark, subtitleColor: subtitleColor),
+                _buildProvinceDropdown(
+                  isDark: isDark,
+                  subtitleColor: subtitleColor,
+                ),
 
                 const SizedBox(height: 8),
 
@@ -162,7 +171,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   child: Row(
                     children: [
                       Icon(
-                        _showReferral ? TablerIcons.chevron_up : TablerIcons.chevron_down,
+                        _showReferral
+                            ? TablerIcons.chevron_up
+                            : TablerIcons.chevron_down,
                         color: subtitleColor,
                         size: 20,
                       ),
@@ -178,7 +189,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ],
                   ),
                 ),
-                
+
                 if (_showReferral) ...[
                   const SizedBox(height: 12),
                   TextFormField(
@@ -190,28 +201,40 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       }
                     },
                     style: GoogleFonts.montserrat(
-                      color: isDark ? AppColors.textPrimaryDark : const Color(0xFF112A46),
+                      color: isDark
+                          ? AppColors.textPrimaryDark
+                          : const Color(0xFF112A46),
                       fontWeight: FontWeight.w600,
                       letterSpacing: 1.5,
                     ),
                     decoration: InputDecoration(
                       hintText: 'Ej: JUAN-A3F8K2',
                       hintStyle: GoogleFonts.montserrat(
-                        color: isDark ? AppColors.textSecondaryDark : const Color(0xFF64748B),
+                        color: isDark
+                            ? AppColors.textSecondaryDark
+                            : const Color(0xFF64748B),
                         fontWeight: FontWeight.w500,
                         letterSpacing: 0,
                       ),
                       filled: true,
                       fillColor: isDark ? AppColors.cardDark : Colors.white,
-                      prefixIcon: const Icon(TablerIcons.gift, color: Color(0xFF10B981)),
+                      prefixIcon: const Icon(
+                        TablerIcons.gift,
+                        color: Color(0xFF10B981),
+                      ),
                       errorText: _referralError,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 18,
+                      ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide(
                           color: _referralError != null
                               ? AppColors.danger
-                              : (isDark ? Colors.transparent : const Color(0xFFE2E8F0)),
+                              : (isDark
+                                    ? Colors.transparent
+                                    : const Color(0xFFE2E8F0)),
                         ),
                       ),
                       enabledBorder: OutlineInputBorder(
@@ -219,19 +242,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         borderSide: BorderSide(
                           color: _referralError != null
                               ? AppColors.danger
-                              : (isDark ? Colors.transparent : const Color(0xFFE2E8F0)),
+                              : (isDark
+                                    ? Colors.transparent
+                                    : const Color(0xFFE2E8F0)),
                         ),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: Color(0xFF10B981), width: 2),
+                        borderSide: const BorderSide(
+                          color: Color(0xFF10B981),
+                          width: 2,
+                        ),
                       ),
                     ),
                   ),
                 ],
-                
+
                 const SizedBox(height: 32),
-                
+
                 // Register Button
                 SizedBox(
                   width: double.infinity,
@@ -299,8 +327,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   child: OutlinedButton(
                     onPressed: _loading ? null : _registerWithGoogle,
                     style: OutlinedButton.styleFrom(
-                      backgroundColor:
-                          isDark ? AppColors.cardDark : Colors.white,
+                      backgroundColor: isDark
+                          ? AppColors.cardDark
+                          : Colors.white,
                       side: BorderSide(
                         color: isDark
                             ? Colors.white24
@@ -418,8 +447,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return Text(
       text,
       style: GoogleFonts.montserrat(
-        color: color, 
-        fontSize: 14, 
+        color: color,
+        fontSize: 14,
         fontWeight: FontWeight.w700,
       ),
     );
@@ -434,9 +463,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
     Widget? suffix,
   }) {
     final card = isDark ? AppColors.cardDark : Colors.white;
-    final textPrimary = isDark ? AppColors.textPrimaryDark : const Color(0xFF112A46);
+    final textPrimary = isDark
+        ? AppColors.textPrimaryDark
+        : const Color(0xFF112A46);
     final borderColor = isDark ? Colors.transparent : const Color(0xFFE2E8F0);
-    final hintColor = isDark ? AppColors.textSecondaryDark : const Color(0xFF64748B);
+    final hintColor = isDark
+        ? AppColors.textSecondaryDark
+        : const Color(0xFF64748B);
 
     return TextFormField(
       controller: controller,
@@ -454,7 +487,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ),
         filled: true,
         fillColor: card,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 20,
+          vertical: 18,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: borderColor),
@@ -486,8 +522,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }) {
     final card = isDark ? AppColors.cardDark : Colors.white;
     final borderColor = isDark ? Colors.transparent : const Color(0xFFE2E8F0);
-    final textPrimary = isDark ? AppColors.textPrimaryDark : const Color(0xFF112A46);
-    final hintColor = isDark ? AppColors.textSecondaryDark : const Color(0xFF64748B);
+    final textPrimary = isDark
+        ? AppColors.textPrimaryDark
+        : const Color(0xFF112A46);
+    final hintColor = isDark
+        ? AppColors.textSecondaryDark
+        : const Color(0xFF64748B);
 
     if (_loadingProvinces) {
       return const LinearProgressIndicator();
@@ -503,10 +543,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: _selectedProvince,
-          hint: Text('Seleccioná tu provincia', style: TextStyle(color: hintColor)),
+          hint: Text(
+            'Seleccioná tu provincia',
+            style: TextStyle(color: hintColor),
+          ),
           isExpanded: true,
-          style: TextStyle(color: textPrimary, fontSize: 15, fontWeight: FontWeight.w500),
-          items: _provinces.map((p) => DropdownMenuItem(value: p, child: Text(p))).toList(),
+          style: TextStyle(
+            color: textPrimary,
+            fontSize: 15,
+            fontWeight: FontWeight.w500,
+          ),
+          items: _provinces
+              .map((p) => DropdownMenuItem(value: p, child: Text(p)))
+              .toList(),
           onChanged: (v) => setState(() => _selectedProvince = v),
         ),
       ),
@@ -533,10 +582,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
       );
 
       if (result['token'] != null && mounted) {
-        final bonusPe = result['referral_bonus_pe'] as int? ?? 0;
-        final referralType = result['referral_type'] as String?;
-        if (bonusPe > 0 && referralType != null && mounted) {
-          // Mostrar pantalla de bienvenida con el bono antes de ir al home
+        final user = result['user'] as Map<String, dynamic>?;
+        final userId = user?['id']?.toString() ?? '';
+        final email = user?['email']?.toString() ?? _emailController.text;
+        final name = user?['name']?.toString() ?? _nameController.text;
+        if (userId.isNotEmpty) {
+          await AnalyticsService.instance.identifyUser(
+            userId: userId,
+            email: email,
+            name: name,
+          );
+        }
+        await AnalyticsService.instance.trackEvent('user_register_success');
+
+        final bonusPe = (result['referral_bonus_pe'] as num?)?.toInt() ?? 0;
+        if (bonusPe > 0) {
           await _showReferralBonus(bonusPe);
         }
         if (mounted) {
@@ -546,6 +606,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           );
         }
       } else {
+        await AnalyticsService.instance.trackEvent('user_register_failed');
         // Verificar si hay error específico del campo referral_code
         final errors = result['errors'] as Map<String, dynamic>?;
         final referralErrors = errors?['referral_code'] as List<dynamic>?;
@@ -648,7 +709,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
               const SizedBox(height: 16),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.white.withAlpha(30),
                   borderRadius: BorderRadius.circular(16),

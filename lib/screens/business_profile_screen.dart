@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/models.dart';
 import '../services/api_service.dart';
+import '../services/analytics_service.dart';
 import '../theme/app_theme.dart';
 import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 
@@ -20,6 +21,11 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
   @override
   void initState() {
     super.initState();
+    AnalyticsService.instance.trackScreen('BusinessProfileScreen');
+    AnalyticsService.instance.trackEvent('business_profile_viewed', properties: {
+      'business_id': widget.business.id,
+      'name': widget.business.name,
+    });
     _loadBalance();
   }
 

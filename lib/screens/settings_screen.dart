@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../services/api_service.dart';
+import '../services/analytics_service.dart';
 import '../services/health_service.dart';
 import '../services/celebration_service.dart';
 import '../services/websocket_service.dart';
@@ -29,6 +30,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void initState() {
     super.initState();
+    AnalyticsService.instance.trackScreen('SettingsScreen');
     _loadSource();
     _loadCelebrationSettings();
     _checkHealthAuth();
@@ -554,7 +556,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text(
-                      'Health Connect no está instalado. Se abrió Play Store para instalarlo y volver a intentar.',
+                      'Health Connect no instalado. Se abrió Play Store.',
                     ),
                     behavior: SnackBarBehavior.floating,
                   ),
@@ -567,11 +569,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
           final granted = await HealthService.requestAuthorization();
           if (!granted && mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text(
-                  'Permiso denegado. Revisá los ajustes del dispositivo.',
+              SnackBar(
+                content: const Text(
+                  'Permiso no otorgado en Health Connect.',
                 ),
                 behavior: SnackBarBehavior.floating,
+                action: SnackBarAction(
+                  label: 'Abrir',
+                  onPressed: () async {
+                    await HealthService.openHealthConnectSettings();
+                  },
+                ),
               ),
             );
             return;
@@ -627,20 +635,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
+                  Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 8,
+                    runSpacing: 4,
                     children: [
-                      Flexible(
-                        child: Text(
-                          title,
-                          style: TextStyle(
-                            color: textPrimary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                          overflow: TextOverflow.ellipsis,
+                      Text(
+                        title,
+                        style: TextStyle(
+                          color: textPrimary,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                      if (isHealthSource) ...[
-                        const SizedBox(width: 8),
+                      if (isHealthSource)
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 6,
@@ -684,7 +691,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             ],
                           ),
                         ),
-                      ],
                     ],
                   ),
                   const SizedBox(height: 2),
@@ -822,6 +828,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _logout() async {
+    await AnalyticsService.instance.trackEvent('user_logout');
+    await AnalyticsService.instance.resetUser();
     await WebSocketService.instance.disconnect();
     await ApiService.logout();
     if (mounted) {

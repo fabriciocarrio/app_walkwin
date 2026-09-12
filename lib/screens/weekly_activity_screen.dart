@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/models.dart';
 import '../services/api_service.dart';
+import '../services/analytics_service.dart';
 import '../theme/app_theme.dart';
 import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 
@@ -24,6 +25,7 @@ class _WeeklyActivityScreenState extends State<WeeklyActivityScreen> {
   @override
   void initState() {
     super.initState();
+    AnalyticsService.instance.trackScreen('WeeklyActivityScreen');
     _weekly = widget.weekly;
     _weekOffset = widget.weekly.weekOffset;
     _loadHistory();

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/notification_store.dart';
+import '../services/analytics_service.dart';
 import '../theme/app_theme.dart';
 import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 
@@ -16,6 +17,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   @override
   void initState() {
     super.initState();
+    AnalyticsService.instance.trackScreen('NotificationsScreen');
     _store.addListener(_onStoreChanged);
   }
 

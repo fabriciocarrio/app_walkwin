@@ -133,8 +133,13 @@ class _BgStepCounter {
     final daily = await _storage.read(key: _keyDaily);
 
     _lastAcceptedSensorValue = sensor != null ? int.tryParse(sensor) : null;
-    if (date == _argentinaDateKey()) {
+    final today = _argentinaDateKey();
+    if (date == today) {
       _sessionSteps = daily != null ? int.tryParse(daily) ?? 0 : 0;
+    } else {
+      _sessionSteps = 0;
+      await _storage.write(key: _keyDaily, value: '0');
+      await _storage.write(key: _keyDate, value: today);
     }
   }
 
@@ -217,11 +222,19 @@ class _BgStepCounter {
     final mainDate = await _storage.read(key: _keyMainDate);
     final mainDaily = await _storage.read(key: _keyMainDaily);
 
-    if (mainVal != null && mainDate != null && mainDate == _argentinaDateKey()) {
+    final today = _argentinaDateKey();
+    if (mainDate != null && mainDate != today) {
+      await _storage.write(key: _keyDaily, value: '0');
+      await _storage.write(key: _keyMainDaily, value: '0');
+      _sessionSteps = 0;
+      return;
+    }
+
+    if (mainVal != null && mainDate != null && mainDate == today) {
       await _storage.write(key: _keySensor, value: mainVal);
       await _storage.write(key: _keyDate, value: mainDate);
     }
-    if (mainDaily != null && mainDate == _argentinaDateKey()) {
+    if (mainDaily != null && mainDate == today) {
       await _storage.write(key: _keyDaily, value: mainDaily);
     }
   }

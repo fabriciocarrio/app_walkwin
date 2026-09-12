@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../theme/app_theme.dart';
+import '../services/analytics_service.dart';
 import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 
 /// Pantalla de scanner QR para check-in en comercios.
@@ -25,6 +26,12 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
   final MobileScannerController _controller = MobileScannerController();
   bool _processed = false;
   String? _errorMsg;
+
+  @override
+  void initState() {
+    super.initState();
+    AnalyticsService.instance.trackScreen('QrScannerScreen');
+  }
 
   @override
   void dispose() {

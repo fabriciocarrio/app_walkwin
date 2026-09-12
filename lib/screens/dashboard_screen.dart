@@ -22,11 +22,12 @@ import 'clan_list_screen.dart';
 import 'clan_detail_screen.dart';
 import 'clan_rankings_screen.dart';
 import '../config/app_config.dart';
+import '../services/analytics_service.dart';
 import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 
 class DashboardScreen extends StatefulWidget {
   final VoidCallback? onNavigateToPremios;
-  final void Function(Business)? onNavigateToMap;
+  final void Function(Business?)? onNavigateToMap;
   final VoidCallback? onOpenSettings;
 
   const DashboardScreen({
@@ -95,6 +96,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   @override
   void initState() {
     super.initState();
+    AnalyticsService.instance.trackScreen('DashboardScreen');
     WidgetsBinding.instance.addObserver(this);
     _activeDayKey = _argentinaDateKey();
     _setupCelebrationAnimation();
@@ -560,6 +562,11 @@ class _DashboardScreenState extends State<DashboardScreen>
     final stepsAtStart = _sessionSteps;
 
     if (_stepSource == 'google_fit' || _stepSource == 'healthkit') {
+      // Solo leer de Health Connect si el permiso fue previamente otorgado
+      final authKey = _stepSource == 'google_fit' ? 'google_fit_authorized' : 'healthkit_authorized';
+      final authVal = await _storage.read(key: authKey);
+      if (authVal != 'true') return; // Permiso no otorgado — no intentar leer
+
       final healthSteps = await HealthService.getTodaySteps();
       if (healthSteps != null && healthSteps > 0) {
         StepCountingService.instance.resetSession();
@@ -637,6 +644,14 @@ class _DashboardScreenState extends State<DashboardScreen>
   Future<void> _loadStats() async {
     if (mounted) setState(() => _loading = true);
     try {
+      final currentDayKey = _argentinaDateKey();
+      if (currentDayKey != _activeDayKey) {
+        _activeDayKey = currentDayKey;
+        await StepCountingService.instance.resetSession();
+        _steps = 0;
+        _lastSyncedSteps = 0;
+      }
+
       final stats = await ApiService.getStats();
       if (mounted) {
         final nextBaseSteps = (stats['today_steps'] as int?) ?? _steps;
@@ -2629,125 +2644,119 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   Widget _buildMapPreview(bool isDark, Color textPrimary, Color textSecondary) {
-    final canNavigateToMap = _featured.isNotEmpty;
     final discoverLabel = _featured.isEmpty
         ? 'Nuevos lugares para descubrir'
         : '${_featured.length} lugares nuevos para descubrir';
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: canNavigateToMap
-            ? () => widget.onNavigateToMap?.call(_featured.first)
-            : null,
-        child: Container(
-          height: 160,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: isDark
-                ? []
-                : [
-                    BoxShadow(
-                      color: const Color(0xFF1A4D8F).withAlpha(22),
-                      blurRadius: 18,
-                      offset: const Offset(0, 6),
-                    ),
-                  ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(20),
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                Image.asset(
-                  'assets/dashboard-descubre.png',
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
-                    color: isDark
-                        ? AppColors.cardAltDark
-                        : const Color(0xFFD8E4F5),
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => widget.onNavigateToMap?.call(null),
+      child: Container(
+        height: 160,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: isDark
+              ? []
+              : [
+                  BoxShadow(
+                    color: const Color(0xFF1A4D8F).withAlpha(22),
+                    blurRadius: 18,
+                    offset: const Offset(0, 6),
                   ),
+                ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Image.asset(
+                'assets/dashboard-descubre.png',
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(
+                  color: isDark
+                      ? AppColors.cardAltDark
+                      : const Color(0xFFD8E4F5),
                 ),
-                Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        const Color(0xFF204A8D).withAlpha(180),
-                        const Color(0xFF2E78F0).withAlpha(70),
-                      ],
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(18),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Row(
-                        children: [
-                          Text(
-                            'Explorá hoy',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          Spacer(),
-                          Icon(
-                            TablerIcons.chevron_right,
-                            color: Colors.white,
-                            size: 24,
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        discoverLabel,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const Spacer(),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 10,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF1F5DDA),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              'Ver mapa',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            SizedBox(width: 6),
-                            Icon(
-                              TablerIcons.map_pin,
-                              color: Colors.white,
-                              size: 16,
-                            ),
-                          ],
-                        ),
-                      ),
+              ),
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      const Color(0xFF204A8D).withAlpha(180),
+                      const Color(0xFF2E78F0).withAlpha(70),
                     ],
                   ),
                 ),
-              ],
-            ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Row(
+                      children: [
+                        Text(
+                          'Explorá hoy',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        Spacer(),
+                        Icon(
+                          TablerIcons.chevron_right,
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      discoverLabel,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1F5DDA),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Ver mapa',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          SizedBox(width: 6),
+                          Icon(
+                            TablerIcons.map_pin,
+                            color: Colors.white,
+                            size: 16,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),

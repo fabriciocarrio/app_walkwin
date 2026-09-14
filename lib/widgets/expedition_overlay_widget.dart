@@ -61,7 +61,7 @@ class ExpeditionOverlayWidget extends StatelessWidget {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text('Por favor habilita los permisos de ubicación GPS para iniciar.'),
-                  backgroundColor: Colors.orangeDark,
+                  backgroundColor: Colors.deepOrange,
                 ),
               );
             }
@@ -219,7 +219,7 @@ class ExpeditionOverlayWidget extends StatelessWidget {
               isRecording ? 'Pausar' : 'Reanudar',
               style: GoogleFonts.outfit(
                 color: Colors.black87,
-                fontWeight: FontWeight.extrabold,
+                fontWeight: FontWeight.w800,
                 fontSize: 14,
               ),
             ),
@@ -243,7 +243,7 @@ class ExpeditionOverlayWidget extends StatelessWidget {
               'Finalizar',
               style: GoogleFonts.outfit(
                 color: Colors.white,
-                fontWeight: FontWeight.extrabold,
+                fontWeight: FontWeight.w800,
                 fontSize: 14,
               ),
             ),

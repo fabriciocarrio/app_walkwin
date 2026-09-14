@@ -1,10 +1,9 @@
 import 'dart:ui' as ui;
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:latlong2/latlong.dart';
+import 'package:latlong2/latlong.dart' hide Path;
 import 'package:share_plus/share_plus.dart';
 import '../services/expedition_service.dart';
 
@@ -112,7 +111,7 @@ class _ExpeditionSummaryCardDialogState extends State<ExpeditionSummaryCardDialo
                   _isSharing ? 'Generando...' : 'Compartir Tarjeta',
                   style: GoogleFonts.outfit(
                     color: Colors.black87,
-                    fontWeight: FontWeight.extrabold,
+                    fontWeight: FontWeight.w800,
                     fontSize: 15,
                   ),
                 ),
@@ -191,7 +190,7 @@ class _ExpeditionSummaryCardDialogState extends State<ExpeditionSummaryCardDialo
                         style: GoogleFonts.orbitron(
                           color: Colors.white,
                           fontSize: 13,
-                          fontWeight: FontWeight.black,
+                          fontWeight: FontWeight.w900,
                           letterSpacing: 1.5,
                         ),
                       ),
@@ -349,7 +348,7 @@ class _ExpeditionSummaryCardDialogState extends State<ExpeditionSummaryCardDialo
             style: GoogleFonts.orbitron(
               color: Colors.white,
               fontSize: 15,
-              fontWeight: FontWeight.extrabold,
+              fontWeight: FontWeight.w800,
             ),
           ),
         ],
@@ -379,14 +378,14 @@ class _RoutePathPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     if (routePoints.isEmpty) {
-      final Paint textPaint = TextPainter(
+      final TextPainter textPainter = TextPainter(
         text: TextSpan(
           text: 'Sin trayecto GPS grabado',
           style: GoogleFonts.orbitron(color: Colors.white38, fontSize: 11),
         ),
         textDirection: TextDirection.ltr,
       )..layout();
-      textPaint.paint(canvas, Offset((size.width - textPaint.width) / 2, (size.height - textPaint.height) / 2));
+      textPainter.paint(canvas, Offset((size.width - textPainter.width) / 2, (size.height - textPainter.height) / 2));
       return;
     }
 

@@ -5,7 +5,9 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:latlong2/latlong.dart' hide Path;
 import 'package:share_plus/share_plus.dart';
+import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 import '../services/expedition_service.dart';
+import '../theme/app_theme.dart';
 
 /// Modal Diálogo que presenta la Tarjeta de Resumen Visual de una Expedición
 /// permitiendo exportarla como imagen PNG y compartirla en historias/redes sociales.
@@ -81,6 +83,8 @@ class _ExpeditionSummaryCardDialogState extends State<ExpeditionSummaryCardDialo
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Dialog(
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
@@ -106,28 +110,35 @@ class _ExpeditionSummaryCardDialogState extends State<ExpeditionSummaryCardDialo
                         height: 18,
                         child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                       )
-                    : const Icon(Icons.share_rounded, color: Colors.black87),
+                    : const Icon(TablerIcons.share, color: Colors.white, size: 18),
                 label: Text(
                   _isSharing ? 'Generando...' : 'Compartir Tarjeta',
-                  style: GoogleFonts.outfit(
-                    color: Colors.black87,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 15,
+                  style: GoogleFonts.sora(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
                   ),
                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF00E5FF),
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                  elevation: 6,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusXl)),
+                  elevation: 0,
                 ),
               ),
               const SizedBox(width: 12),
               IconButton(
                 onPressed: () => Navigator.of(context).pop(),
-                icon: const Icon(Icons.close_rounded, color: Colors.white, size: 28),
+                icon: const Icon(
+                  TablerIcons.x,
+                  color: Colors.white,
+                  size: 24,
+                ),
                 style: IconButton.styleFrom(
-                  backgroundColor: Colors.white24,
+                  backgroundColor: isDark
+                      ? Colors.white.withValues(alpha: 0.15)
+                      : Colors.black.withValues(alpha: 0.15),
                   padding: const EdgeInsets.all(12),
                 ),
               ),
@@ -138,8 +149,16 @@ class _ExpeditionSummaryCardDialogState extends State<ExpeditionSummaryCardDialo
     );
   }
 
-  /// Construcción visual estética de la Tarjeta Resumen estilo cromo/historia
+  /// Construcción visual estética de la Tarjeta Resumen con estilo de la app
   Widget _buildVisualCard(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final card = isDark ? AppColors.cardDark : Colors.white;
+    final textPrimary = isDark
+        ? AppColors.textPrimaryDark
+        : AppColors.textPrimaryLight;
+    final textSecondary = isDark
+        ? AppColors.textSecondaryDark
+        : AppColors.textSecondaryLight;
     final String dateStr =
         '${widget.result.startTime.day}/${widget.result.startTime.month}/${widget.result.startTime.year}';
 
@@ -147,21 +166,16 @@ class _ExpeditionSummaryCardDialogState extends State<ExpeditionSummaryCardDialo
       width: 320,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(28),
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF0B101D),
-            Color(0xFF162032),
-            Color(0xFF0D1424),
-          ],
+        color: card,
+        border: Border.all(
+          color: AppColors.primary.withValues(alpha: 0.5),
+          width: 1.5,
         ),
-        border: Border.all(color: const Color(0xFF00E5FF), width: 2.5),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF00E5FF).withValues(alpha: 0.4),
+            color: AppColors.primary.withValues(alpha: 0.2),
             blurRadius: 20,
-            spreadRadius: 2,
+            spreadRadius: 1,
           ),
         ],
       ),
@@ -173,52 +187,82 @@ class _ExpeditionSummaryCardDialogState extends State<ExpeditionSummaryCardDialo
             // Header: Branding Exploria + Badge
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Color(0xFF00E5FF), Color(0xFF00897B)],
+                  colors: [
+                    AppColors.primary,
+                    const Color(0xFF4F46E5),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.explore_rounded, color: Colors.white, size: 28),
-                  const SizedBox(width: 10),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'EXPEDICIÓN EXPLORIA',
-                        style: GoogleFonts.orbitron(
-                          color: Colors.white,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 1.5,
-                        ),
-                      ),
-                      Text(
-                        dateStr,
-                        style: GoogleFonts.outfit(
-                          color: Colors.white70,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const Spacer(),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    width: 36,
+                    height: 36,
                     decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.3),
-                      borderRadius: BorderRadius.circular(12),
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusMd),
+                    ),
+                    child: const Icon(
+                      TablerIcons.map_2,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'EXPEDICIÓN EXPLORIA',
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.sora(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.8,
+                          ),
+                        ),
+                        Text(
+                          dateStr,
+                          style: GoogleFonts.sora(
+                            color: Colors.white70,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(20),
                       border: Border.all(color: Colors.white38),
                     ),
-                    child: Text(
-                      'COMPLETADO',
-                      style: GoogleFonts.orbitron(
-                        color: const Color(0xFF76FF03),
-                        fontSize: 9,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          TablerIcons.circle_check,
+                          color: Color(0xFF76FF03),
+                          size: 12,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'COMPLETADO',
+                          style: GoogleFonts.jetBrainsMono(
+                            color: const Color(0xFF76FF03),
+                            fontSize: 9,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -229,9 +273,12 @@ class _ExpeditionSummaryCardDialogState extends State<ExpeditionSummaryCardDialo
             Container(
               height: 150,
               width: double.infinity,
-              color: const Color(0xFF050913),
+              color: isDark ? const Color(0xFF0D1321) : const Color(0xFFF1F5F9),
               child: CustomPaint(
-                painter: _RoutePathPainter(routePoints: widget.result.routePoints),
+                painter: _RoutePathPainter(
+                  routePoints: widget.result.routePoints,
+                  isDark: isDark,
+                ),
               ),
             ),
 
@@ -246,8 +293,10 @@ class _ExpeditionSummaryCardDialogState extends State<ExpeditionSummaryCardDialo
                         child: _buildSummaryMetricItem(
                           label: 'DISTANCIA TOTAL',
                           value: '${widget.result.distanceKm.toStringAsFixed(2)} km',
-                          icon: Icons.directions_walk_rounded,
-                          accentColor: const Color(0xFF76FF03),
+                          icon: TablerIcons.walk,
+                          accentColor: const Color(0xFF4CAF50),
+                          textPrimary: textPrimary,
+                          textSecondary: textSecondary,
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -255,8 +304,10 @@ class _ExpeditionSummaryCardDialogState extends State<ExpeditionSummaryCardDialo
                         child: _buildSummaryMetricItem(
                           label: 'TIEMPO TOTAL',
                           value: _formatSeconds(widget.result.elapsedSeconds),
-                          icon: Icons.timer_outlined,
-                          accentColor: const Color(0xFF00E5FF),
+                          icon: TablerIcons.clock,
+                          accentColor: AppColors.primary,
+                          textPrimary: textPrimary,
+                          textSecondary: textSecondary,
                         ),
                       ),
                     ],
@@ -268,17 +319,21 @@ class _ExpeditionSummaryCardDialogState extends State<ExpeditionSummaryCardDialo
                         child: _buildSummaryMetricItem(
                           label: 'PASOS ESTIMADOS',
                           value: '${widget.result.estimatedSteps}',
-                          icon: Icons.directions_run_rounded,
-                          accentColor: const Color(0xFFEA80FC),
+                          icon: TablerIcons.run,
+                          accentColor: const Color(0xFF9C27B0),
+                          textPrimary: textPrimary,
+                          textSecondary: textSecondary,
                         ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: _buildSummaryMetricItem(
                           label: 'PE GANADOS',
-                          value: '+${widget.result.estimatedPe} PE',
-                          icon: Icons.monetization_on_outlined,
-                          accentColor: const Color(0xFFFFD700),
+                          value: '+${widget.result.estimatedPe}',
+                          icon: TablerIcons.coin,
+                          accentColor: AppColors.coinGoldDark,
+                          textPrimary: textPrimary,
+                          textSecondary: textSecondary,
                         ),
                       ),
                     ],
@@ -288,12 +343,16 @@ class _ExpeditionSummaryCardDialogState extends State<ExpeditionSummaryCardDialo
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.verified_rounded, color: Color(0xFF00E5FF), size: 14),
+                      const Icon(
+                        TablerIcons.circle_check,
+                        color: AppColors.primary,
+                        size: 14,
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         'Exploria • Camina, Descubre y Gana',
-                        style: GoogleFonts.outfit(
-                          color: Colors.white54,
+                        style: TextStyle(
+                          color: textSecondary,
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
                         ),
@@ -314,13 +373,17 @@ class _ExpeditionSummaryCardDialogState extends State<ExpeditionSummaryCardDialo
     required String value,
     required IconData icon,
     required Color accentColor,
+    required Color textPrimary,
+    required Color textSecondary,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFF141C2B),
+        color: accentColor.withValues(alpha: isDark ? 0.15 : 0.08),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: accentColor.withValues(alpha: 0.4)),
+        border: Border.all(color: accentColor.withValues(alpha: 0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -333,10 +396,11 @@ class _ExpeditionSummaryCardDialogState extends State<ExpeditionSummaryCardDialo
                 child: Text(
                   label,
                   overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.orbitron(
-                    color: Colors.white54,
+                  style: TextStyle(
+                    color: textSecondary,
                     fontSize: 8,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w700,
+                    fontFamily: 'JetBrains Mono',
                   ),
                 ),
               ),
@@ -345,8 +409,8 @@ class _ExpeditionSummaryCardDialogState extends State<ExpeditionSummaryCardDialo
           const SizedBox(height: 6),
           Text(
             value,
-            style: GoogleFonts.orbitron(
-              color: Colors.white,
+            style: GoogleFonts.sora(
+              color: textPrimary,
               fontSize: 15,
               fontWeight: FontWeight.w800,
             ),
@@ -372,8 +436,9 @@ class _ExpeditionSummaryCardDialogState extends State<ExpeditionSummaryCardDialo
 /// con marcadores de Inicio (Verde) y Fin (Rojo).
 class _RoutePathPainter extends CustomPainter {
   final List<LatLng> routePoints;
+  final bool isDark;
 
-  _RoutePathPainter({required this.routePoints});
+  _RoutePathPainter({required this.routePoints, required this.isDark});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -381,7 +446,11 @@ class _RoutePathPainter extends CustomPainter {
       final TextPainter textPainter = TextPainter(
         text: TextSpan(
           text: 'Sin trayecto GPS grabado',
-          style: GoogleFonts.orbitron(color: Colors.white38, fontSize: 11),
+          style: TextStyle(
+            color: isDark ? Colors.white38 : Colors.black38,
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         textDirection: TextDirection.ltr,
       )..layout();
@@ -391,7 +460,8 @@ class _RoutePathPainter extends CustomPainter {
 
     // Dibujar rejilla decorativa de mapa
     final Paint gridPaint = Paint()
-      ..color = const Color(0xFF1E293B).withValues(alpha: 0.5)
+      ..color = (isDark ? const Color(0xFF1E293B) : const Color(0xFFCBD5E1))
+          .withValues(alpha: 0.5)
       ..strokeWidth = 1.0;
 
     for (double x = 0; x < size.width; x += 25) {
@@ -403,7 +473,7 @@ class _RoutePathPainter extends CustomPainter {
 
     if (routePoints.length == 1) {
       final center = Offset(size.width / 2, size.height / 2);
-      canvas.drawCircle(center, 8, Paint()..color = const Color(0xFF76FF03));
+      canvas.drawCircle(center, 8, Paint()..color = const Color(0xFF4CAF50));
       return;
     }
 
@@ -442,9 +512,9 @@ class _RoutePathPainter extends CustomPainter {
       path.lineTo(pt.dx, pt.dy);
     }
 
-    // Resplandor Neón Exterior (Glow)
+    // Resplandor Exterior (Glow)
     final Paint glowPaint = Paint()
-      ..color = const Color(0xFF00E5FF).withValues(alpha: 0.4)
+      ..color = AppColors.primary.withValues(alpha: 0.35)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 8.0
       ..strokeCap = StrokeCap.round
@@ -452,9 +522,9 @@ class _RoutePathPainter extends CustomPainter {
 
     canvas.drawPath(path, glowPaint);
 
-    // Núcleo Neón Neón Interior (Core)
+    // Núcleo Interior (Core)
     final Paint corePaint = Paint()
-      ..color = const Color(0xFF00E5FF)
+      ..color = AppColors.primary
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3.5
       ..strokeCap = StrokeCap.round
@@ -464,7 +534,7 @@ class _RoutePathPainter extends CustomPainter {
 
     // Marcador de Inicio (Verde)
     final startPt = project(routePoints.first);
-    canvas.drawCircle(startPt, 6, Paint()..color = const Color(0xFF76FF03));
+    canvas.drawCircle(startPt, 6, Paint()..color = const Color(0xFF4CAF50));
     canvas.drawCircle(startPt, 3, Paint()..color = Colors.white);
 
     // Marcador de Fin (Rojo)
@@ -475,6 +545,7 @@ class _RoutePathPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _RoutePathPainter oldDelegate) {
-    return oldDelegate.routePoints.length != routePoints.length;
+    return oldDelegate.routePoints.length != routePoints.length ||
+        oldDelegate.isDark != isDark;
   }
 }

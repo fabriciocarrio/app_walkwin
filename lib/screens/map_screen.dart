@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:geolocator/geolocator.dart';
@@ -67,6 +68,200 @@ class _MapScreenState extends State<MapScreen>
       context: context,
       barrierDismissible: false,
       builder: (_) => ExpeditionSummaryCardDialog(result: result),
+    );
+  }
+
+  void _showExpeditionModal() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPrimary = isDark
+        ? AppColors.textPrimaryDark
+        : AppColors.textPrimaryLight;
+    final textSecondary = isDark
+        ? AppColors.textSecondaryDark
+        : AppColors.textSecondaryLight;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Container(
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF151B29) : Colors.white,
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(28),
+            ),
+          ),
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 12,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? Colors.white.withAlpha(40)
+                        : Colors.black.withAlpha(20),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF00E5FF).withAlpha(20),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      TablerIcons.map_2,
+                      color: Color(0xFF00E5FF),
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Iniciar expedición',
+                    style: TextStyle(
+                      color: textPrimary,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? Colors.white.withAlpha(8)
+                      : Colors.black.withAlpha(4),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF00E5FF).withAlpha(20),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(
+                        TablerIcons.directions,
+                        color: Color(0xFF00E5FF),
+                        size: 18,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Modo registro',
+                            style: TextStyle(
+                              color: textSecondary,
+                              fontSize: 12,
+                            ),
+                          ),
+                          Text(
+                            'GPS en tiempo real',
+                            style: TextStyle(
+                              color: textPrimary,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF00E5FF).withAlpha(20),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Text(
+                        'Seguimiento',
+                        style: TextStyle(
+                          color: Color(0xFF00E5FF),
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () async {
+                    HapticFeedback.mediumImpact();
+                    Navigator.pop(ctx);
+                    final bool started =
+                        await _expeditionService.startExpedition();
+                    if (!started && mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Por favor habilita los permisos de ubicación GPS para iniciar.',
+                          ),
+                          backgroundColor: Colors.deepOrange,
+                        ),
+                      );
+                    }
+                  },
+                  icon: const Icon(TablerIcons.map_2, size: 20),
+                  label: const Text('Iniciar expedición'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: Text(
+                    'Cerrar',
+                    style: TextStyle(
+                      color: textSecondary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -1189,6 +1384,26 @@ class _MapScreenState extends State<MapScreen>
                 child: _buildMapFilters(isDark, card, textPrimary),
               ),
             ),
+            // Botón "Iniciar expedición"
+            if (_expeditionService.isIdle)
+              Positioned(
+                bottom:
+                    (_selectedBusiness != null ||
+                        _selectedPoi != null ||
+                        _selectedSpawn != null)
+                    ? 340
+                    : 144,
+                right: 16,
+                child: FloatingActionButton.small(
+                  heroTag: 'start_expedition',
+                  backgroundColor: const Color(0xFF00E5FF),
+                  onPressed: () => _showExpeditionModal(),
+                  child: const Icon(
+                    TablerIcons.map_2,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
             // Botón "Generar puntos dinámicos"
             Positioned(
               bottom:
@@ -1291,13 +1506,8 @@ class _MapScreenState extends State<MapScreen>
             ),
             // Overlay Flotante para Control de Expedición
             Positioned(
-              bottom: (_selectedBusiness != null ||
-                      _selectedPoi != null ||
-                      _selectedSpawn != null)
-                  ? 250
-                  : 10,
-              left: 0,
-              right: 0,
+              top: MediaQuery.of(context).padding.top + 140,
+              left: 16,
               child: ExpeditionOverlayWidget(
                 expeditionService: _expeditionService,
                 onFinishRequested: _handleFinishExpedition,

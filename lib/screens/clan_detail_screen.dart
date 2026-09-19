@@ -5,6 +5,7 @@ import '../models/models.dart';
 import '../services/api_service.dart';
 import '../services/analytics_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/clan_v2_widgets.dart';
 import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 
 class ClanDetailScreen extends StatefulWidget {
@@ -58,11 +59,164 @@ class _ClanDetailScreenState extends State<ClanDetailScreen> {
           _clan = ClanDetail.fromJson(detailResult['clan']);
           _loading = false;
         });
+        _loadClanV2Data();
       }
     } catch (_) {
       if (mounted) setState(() => _loading = false);
     }
   }
+
+  List<dynamic> _improvements = [];
+  int _historicalInfluence = 0;
+  Map<String, dynamic>? _activeOperation;
+  List<dynamic> _trades = [];
+
+  Future<void> _loadClanV2Data() async {
+    try {
+      final impRes = await ApiService.getClanImprovements(widget.clanId);
+      final opRes = await ApiService.getClanOperations(widget.clanId);
+      final tradeRes = await ApiService.getClanTrades(widget.clanId);
+      if (!mounted) return;
+      setState(() {
+        _improvements = (impRes['improvements'] as List?) ?? [];
+        _historicalInfluence = impRes['historical_influence'] as int? ?? 0;
+        _activeOperation = opRes['active_operation'] as Map<String, dynamic>?;
+        _trades = (tradeRes['trades'] as List?) ?? [];
+      });
+    } catch (_) {}
+  }
+
+  Future<void> _onSelectRole(String role, int targetUserId) async {
+    try {
+      final res = await ApiService.assignClanRole(widget.clanId, targetUserId, role);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(res['message']?.toString() ?? 'Rol asignado correctamente')),
+        );
+        _load();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  Future<void> _onBuyImprovement(String key) async {
+    try {
+      final res = await ApiService.buyClanImprovement(widget.clanId, key);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(res['message']?.toString() ?? '¡Mejora comprada!')),
+        );
+        _loadClanV2Data();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  Future<void> _onStartOperation(String type) async {
+    try {
+      final res = await ApiService.startClanOperation(widget.clanId, type);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(res['message']?.toString() ?? '¡Operación iniciada!')),
+        );
+        _loadClanV2Data();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  Future<void> _onAcceptTrade(int tradeId) async {
+    try {
+      final res = await ApiService.acceptClanTrade(widget.clanId, tradeId);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(res['message']?.toString() ?? 'Intercambio completado')),
+        );
+        _loadClanV2Data();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  Future<void> _onGiftPe() async {
+    final peController = TextEditingController();
+    int? selectedRecipientId;
+    final members = _clan?.members ?? [];
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Regalar PE a un compañero'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            DropdownButtonFormField<int>(
+              decoration: const InputDecoration(labelText: 'Destinatario'),
+              items: members
+                  .where((m) => m.userId != _currentUserId)
+                  .map((m) => DropdownMenuItem(value: m.userId, child: Text(m.name)))
+                  .toList(),
+              onChanged: (val) => selectedRecipientId = val,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: peController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'Cantidad de PE', hintText: 'Ej: 100'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+          ElevatedButton(
+            onPressed: () async {
+              final amount = int.tryParse(peController.text) ?? 0;
+              if (selectedRecipientId != null && amount > 0) {
+                Navigator.pop(ctx);
+                try {
+                  final res = await ApiService.giftPeToMember(widget.clanId, selectedRecipientId!, amount);
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(res['message']?.toString() ?? 'PE regalado exitosamente')),
+                    );
+                    _load();
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+                    );
+                  }
+                }
+              }
+            },
+            child: const Text('Enviar PE'),
+          ),
+        ],
+      ),
+    );
+  }
+
 
   Future<void> _showClanOnboardingOnce() async {
     const key = 'clan_onboarding_shown';
@@ -284,6 +438,59 @@ class _ClanDetailScreenState extends State<ClanDetailScreen> {
                         _buildStatsRow(isDark, card, textPrimary, textSecondary),
                         const SizedBox(height: 16),
                         _buildInviteCard(isDark, card, textPrimary, textSecondary),
+                        const SizedBox(height: 16),
+                        // Clan v2 Weekly Operation Progress
+                        ClanOperationCardWidget(
+                          activeOperation: _activeOperation,
+                          onStartOperationTap: () {
+                            showDialog(
+                              context: context,
+                              builder: (ctx) => AlertDialog(
+                                title: const Text('Iniciar Operación Semanal'),
+                                content: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    ListTile(
+                                      title: const Text('Expedición (5 POIs)'),
+                                      onTap: () {
+                                        Navigator.pop(ctx);
+                                        _onStartOperation('expedition');
+                                      },
+                                    ),
+                                    ListTile(
+                                      title: const Text('Incursión (10 Miembros)'),
+                                      onTap: () {
+                                        Navigator.pop(ctx);
+                                        _onStartOperation('incursion');
+                                      },
+                                    ),
+                                    ListTile(
+                                      title: const Text('Festival (5 Check-ins)'),
+                                      onTap: () {
+                                        Navigator.pop(ctx);
+                                        _onStartOperation('festival');
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        // Clan v2 Improvements Tree
+                        ClanImprovementTreeWidget(
+                          improvements: _improvements,
+                          historicalInfluence: _historicalInfluence,
+                          onBuyImprovement: _onBuyImprovement,
+                        ),
+                        const SizedBox(height: 16),
+                        // Clan v2 Trade Market & Gifts
+                        ClanTradeMarketWidget(
+                          trades: _trades,
+                          onAcceptTradeTap: _onAcceptTrade,
+                          onGiftPeTap: _onGiftPe,
+                        ),
                         const SizedBox(height: 16),
                         _buildMembersSection(isDark, card, textPrimary, textSecondary),
                         const SizedBox(height: 20),

@@ -6,6 +6,8 @@ import '../services/analytics_service.dart';
 import '../services/notification_service.dart';
 import '../services/websocket_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/card_detail_dialog.dart';
+import '../widgets/equipped_cards_bar.dart';
 import 'collectible_detail_screen.dart';
 import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 
@@ -152,8 +154,87 @@ class _CollectionScreenState extends State<CollectionScreen>
           _error = e.toString();
           _loading = false;
         });
-      }
-    }
+  void _openCardDetailDialog(Map<String, dynamic> userCard) {
+    final int userCardId = userCard['id'] as int;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => CardDetailDialog(
+        userCard: userCard,
+        onEquip: () async {
+          Navigator.pop(ctx);
+          try {
+            final res = await ApiService.equipCard(userCardId, 1);
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(res['message']?.toString() ?? 'Tarjeta equipada')),
+              );
+              _loadData();
+            }
+          } catch (e) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+              );
+            }
+          }
+        },
+        onUnequip: () async {
+          Navigator.pop(ctx);
+          try {
+            final res = await ApiService.unequipCard(userCardId);
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(res['message']?.toString() ?? 'Tarjeta desequipada')),
+              );
+              _loadData();
+            }
+          } catch (e) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+              );
+            }
+          }
+        },
+        onLevelUp: () async {
+          Navigator.pop(ctx);
+          try {
+            final res = await ApiService.levelUpCard(userCardId);
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(res['message']?.toString() ?? '¡Nivel incrementado!')),
+              );
+              _loadData();
+            }
+          } catch (e) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+              );
+            }
+          }
+        },
+        onFuse: () async {
+          Navigator.pop(ctx);
+          try {
+            final res = await ApiService.fuseCard(userCardId);
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(res['message']?.toString() ?? '¡Fusión realizada!')),
+              );
+              _loadData();
+            }
+          } catch (e) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+              );
+            }
+          }
+        },
+      ),
+    );
   }
 
   @override

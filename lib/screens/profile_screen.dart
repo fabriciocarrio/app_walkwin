@@ -3,6 +3,8 @@ import '../config/app_config.dart';
 import '../services/api_service.dart';
 import '../services/analytics_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/equipped_cards_bar.dart';
+import '../widgets/attributes_view_widget.dart';
 import 'package:flutter_tabler_icons/flutter_tabler_icons.dart';
 
 final _avatars = List.generate(34, (i) => '${i + 1}.png');
@@ -33,12 +35,53 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String? _selectedProvince;
   bool _loadingProvinces = true;
 
+  Map<String, dynamic>? _userAttributes;
+  int _unassignedPoints = 0;
+  List<dynamic> _equippedCards = [];
+  int _maxSlots = 3;
+
   @override
   void initState() {
     super.initState();
     AnalyticsService.instance.trackScreen('ProfileScreen');
     _loadProfile();
     _loadProvinces();
+    _loadAttributes();
+  }
+
+  Future<void> _loadAttributes() async {
+    try {
+      final attrRes = await ApiService.getUserAttributes();
+      final cardsRes = await ApiService.getUserCards();
+      if (!mounted) return;
+      setState(() {
+        _userAttributes = attrRes['attributes'] as Map<String, dynamic>?;
+        _unassignedPoints = attrRes['unassigned_points'] as int? ?? 0;
+        _equippedCards = (cardsRes['equipped_cards'] as List?) ?? [];
+        _maxSlots = cardsRes['max_slots'] as int? ?? 3;
+      });
+    } catch (_) {}
+  }
+
+  Future<void> _onAssignAttributePoint(String attr) async {
+    try {
+      final res = await ApiService.assignAttributePoint(attr);
+      if (res['attributes'] != null && mounted) {
+        setState(() {
+          _userAttributes = res['attributes']['attributes'] as Map<String, dynamic>?;
+          _unassignedPoints = res['attributes']['unassigned_points'] as int? ?? 0;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(res['message']?.toString() ?? 'Punto asignado con éxito')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+        );
+      }
+    }
   }
 
   @override
@@ -199,6 +242,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 children: [
                   const SizedBox(height: 12),
                   _buildAvatarSection(isDark, card, textPrimary, textSecondary),
+                  const SizedBox(height: 20),
+                  // Equipped Cards Slots Bar
+                  EquippedCardsBar(
+                    maxSlots: _maxSlots,
+                    equippedCards: _equippedCards,
+                  ),
+                  const SizedBox(height: 20),
+                  // Player 10 Attributes Breakdown & Allocator
+                  if (_userAttributes != null)
+                    AttributesViewWidget(
+                      attributes: _userAttributes!,
+                      unassignedPoints: _unassignedPoints,
+                      onAssignPoint: _onAssignAttributePoint,
+                    ),
                   const SizedBox(height: 28),
                   _buildField(
                     'Nombre',

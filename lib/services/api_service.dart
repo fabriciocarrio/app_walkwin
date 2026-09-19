@@ -849,4 +849,174 @@ class ApiService {
   static Future<void> logout() async {
     await clearToken();
   }
+
+  // --- Cards & Equip Methods ---
+  static Future<Map<String, dynamic>> getCardsCatalog({String? rarity, String? category, String? department, String? search}) async {
+    await getToken();
+    final query = <String, String>{};
+    if (rarity != null) query['rarity'] = rarity;
+    if (category != null) query['category'] = category;
+    if (department != null) query['department'] = department;
+    if (search != null) query['search'] = search;
+
+    final uri = Uri.parse('$baseUrl/cards').replace(queryParameters: query.isEmpty ? null : query);
+    final response = await http.get(uri, headers: _headers);
+    return jsonDecode(response.body);
+  }
+
+  static Future<Map<String, dynamic>> getCardDetail(int cardId) async {
+    await getToken();
+    final response = await http.get(Uri.parse('$baseUrl/cards/$cardId'), headers: _headers);
+    return jsonDecode(response.body);
+  }
+
+  static Future<Map<String, dynamic>> getUserCards() async {
+    await getToken();
+    final response = await http.get(Uri.parse('$baseUrl/users/me/cards'), headers: _headers);
+    return jsonDecode(response.body);
+  }
+
+  static Future<Map<String, dynamic>> equipCard(int userCardId, int slot) async {
+    await getToken();
+    final response = await http.post(
+      Uri.parse('$baseUrl/users/me/cards/$userCardId/equip'),
+      headers: _headers,
+      body: jsonEncode({'slot': slot}),
+    );
+    return jsonDecode(response.body);
+  }
+
+  static Future<Map<String, dynamic>> unequipCard(int userCardId) async {
+    await getToken();
+    final response = await http.post(
+      Uri.parse('$baseUrl/users/me/cards/$userCardId/unequip'),
+      headers: _headers,
+    );
+    return jsonDecode(response.body);
+  }
+
+  static Future<Map<String, dynamic>> levelUpCard(int userCardId) async {
+    await getToken();
+    final response = await http.post(
+      Uri.parse('$baseUrl/users/me/cards/$userCardId/level-up'),
+      headers: _headers,
+    );
+    return jsonDecode(response.body);
+  }
+
+  static Future<Map<String, dynamic>> fuseCard(int userCardId) async {
+    await getToken();
+    final response = await http.post(
+      Uri.parse('$baseUrl/users/me/cards/$userCardId/fuse'),
+      headers: _headers,
+    );
+    return jsonDecode(response.body);
+  }
+
+  // --- Player Attributes Methods ---
+  static Future<Map<String, dynamic>> getUserAttributes() async {
+    await getToken();
+    final response = await http.get(Uri.parse('$baseUrl/users/me/attributes'), headers: _headers);
+    return jsonDecode(response.body);
+  }
+
+  static Future<Map<String, dynamic>> assignAttributePoint(String attribute, {int points = 1}) async {
+    await getToken();
+    final response = await http.post(
+      Uri.parse('$baseUrl/users/me/attributes/assign'),
+      headers: _headers,
+      body: jsonEncode({'attribute': attribute, 'points': points}),
+    );
+    return jsonDecode(response.body);
+  }
+
+  // --- Clanes v2 Roles, Improvements & Operations ---
+  static Future<Map<String, dynamic>> assignClanRole(int clanId, int targetUserId, String role) async {
+    await getToken();
+    final response = await http.post(
+      Uri.parse('$baseUrl/clans/$clanId/roles/assign'),
+      headers: _headers,
+      body: jsonEncode({'user_id': targetUserId, 'role': role}),
+    );
+    return jsonDecode(response.body);
+  }
+
+  static Future<Map<String, dynamic>> getClanImprovements(int clanId) async {
+    await getToken();
+    final response = await http.get(Uri.parse('$baseUrl/clans/$clanId/improvements'), headers: _headers);
+    return jsonDecode(response.body);
+  }
+
+  static Future<Map<String, dynamic>> buyClanImprovement(int clanId, String improvementKey) async {
+    await getToken();
+    final response = await http.post(
+      Uri.parse('$baseUrl/clans/$clanId/improvements/buy'),
+      headers: _headers,
+      body: jsonEncode({'improvement_key': improvementKey}),
+    );
+    return jsonDecode(response.body);
+  }
+
+  static Future<Map<String, dynamic>> getClanOperations(int clanId) async {
+    await getToken();
+    final response = await http.get(Uri.parse('$baseUrl/clans/$clanId/operations'), headers: _headers);
+    return jsonDecode(response.body);
+  }
+
+  static Future<Map<String, dynamic>> startClanOperation(int clanId, String operationType) async {
+    await getToken();
+    final response = await http.post(
+      Uri.parse('$baseUrl/clans/$clanId/operations/start'),
+      headers: _headers,
+      body: jsonEncode({'operation_type': operationType}),
+    );
+    return jsonDecode(response.body);
+  }
+
+  // --- Clan Trades & Gifts ---
+  static Future<Map<String, dynamic>> getClanTrades(int clanId) async {
+    await getToken();
+    final response = await http.get(Uri.parse('$baseUrl/clans/$clanId/trades'), headers: _headers);
+    return jsonDecode(response.body);
+  }
+
+  static Future<Map<String, dynamic>> createClanTradeOffer(int clanId, int offeredUserCardId, {int? toUserId, int? requestedUserCardId}) async {
+    await getToken();
+    final response = await http.post(
+      Uri.parse('$baseUrl/clans/$clanId/trades'),
+      headers: _headers,
+      body: jsonEncode({
+        'offered_user_card_id': offeredUserCardId,
+        'to_user_id': toUserId,
+        'requested_user_card_id': requestedUserCardId,
+      }),
+    );
+    return jsonDecode(response.body);
+  }
+
+  static Future<Map<String, dynamic>> acceptClanTrade(int clanId, int tradeId) async {
+    await getToken();
+    final response = await http.post(
+      Uri.parse('$baseUrl/clans/$clanId/trades/$tradeId/accept'),
+      headers: _headers,
+    );
+    return jsonDecode(response.body);
+  }
+
+  static Future<Map<String, dynamic>> giftPeToMember(int clanId, int toUserId, int peAmount) async {
+    await getToken();
+    final response = await http.post(
+      Uri.parse('$baseUrl/clans/$clanId/gifts/pe'),
+      headers: _headers,
+      body: jsonEncode({'to_user_id': toUserId, 'pe': peAmount}),
+    );
+    return jsonDecode(response.body);
+  }
+
+  // --- Seasons ---
+  static Future<Map<String, dynamic>> getCurrentSeason() async {
+    await getToken();
+    final response = await http.get(Uri.parse('$baseUrl/seasons/current'), headers: _headers);
+    return jsonDecode(response.body);
+  }
 }
